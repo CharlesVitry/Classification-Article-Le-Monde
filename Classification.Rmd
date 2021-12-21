@@ -50,6 +50,8 @@ pre { /* Code block - determines code spacing between lines */
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+
+
 #install for export in pdf file
 #tinytex::install_tinytex()
 
