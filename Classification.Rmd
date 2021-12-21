@@ -39,7 +39,10 @@ Pour l’exercice l’élément positif est le fait d’être un article de type
 
 ```
 
-##Présentation des données
+# Présentation des données
+
+Nous n'effectuons que la dernière partie d'un projet de Data Science : la modélisation,
+cette étape constitue 5 à 20% du temps consacré à un ce type de projet.
 
 corrélations
 ```{r}
@@ -51,27 +54,35 @@ distribution
 
 ```
 
-# Premier modèle
+#Modèle Supervisé
+Apprentissage supervisé: expliquer/prédire  une sortie Y à partir d’entrées X 
+Nous devons éviter le sur-apprentissage.
+
+Modèle supervisé pouvant être utilisé : CART , randomforest, régression linéaire
+
+
+
+## Premier modèle
 ```{r}
 
 ```
 
-# Deuxième modèle
+## Deuxième modèle
 ```{r}
 
 ```
 
-# Troisième modèle
+## Troisième modèle
 ```{r}
 
 ```
 
-# Comparaison modèle
+## Comparaison modèle
 ```{r}
 
 ```
 
-# Mise en œuvre d’un modèle supervisé avec maximum 25 variables
+## Mise en œuvre d’un modèle supervisé avec maximum 25 variables
 ```{r}
 
 ```
