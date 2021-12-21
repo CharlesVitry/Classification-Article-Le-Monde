@@ -1,0 +1,79 @@
+---
+title: |
+  ![](RStudio_Logo){width=1in}  
+  Classification des articles du monde en fonction de leur contenu
+author: 
+- Charles Vitry
+- Clovis Deletre
+date: "[Fichiers de données et de test fournis](https://www.lemonde.fr/)"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#install for export in pdf file
+#tinytex::install_tinytex()
+```
+
+# Présentation des données
+
+## Import de la base de données & du jeu test
+```{r}
+data <- 
+  read.csv("~/Classification Article Le Monde/le_monde.csv", sep=";", comment.char="#")
+
+test <- 
+  read.csv("~/Classification Article Le Monde/lignes_jeux_tests.csv")
+
+
+```
+
+## transformation des données
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+
