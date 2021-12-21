@@ -15,14 +15,26 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #install for export in pdf file
 #tinytex::install_tinytex()
+
+if(!require(tm)) install.packages("tm", repos = "http://cran.us.r-project.org")
+require(tm)
+
+if(!require(wordcloud2)) install.packages("wordcloud2", repos = "http://cran.us.r-project.org")
+require(wordcloud2)
+
+
+if(!require(randomForest)) install.packages("randomForest", repos = "http://cran.us.r-project.org")
+require(randomForest)
 ```
 
 
 
 ## Import de la base de données & du jeu test
+
+On utilise l'encodage UTF-8 car le monde est un journal français utilisant des caractères spéciaux.
 ```{r}
 data <- 
-  read.csv("~/Classification Article Le Monde/le_monde.csv", sep=";", comment.char="#")
+   read.csv("~/Classification Article Le Monde/le_monde.csv", encoding="UTF-8", sep=";", comment.char="#")
 
 test <- 
   read.csv("~/Classification Article Le Monde/lignes_jeux_tests.csv")
@@ -32,12 +44,46 @@ test <-
 
 ## transformation des données
 Pour l’exercice l’élément positif est le fait d’être un article de type économie
+
+Suppression des deux collones non utiles à la modélisation
 ```{r}
+data$date <- NULL
+data$title <- NULL
+```
 
-
-
+Supprimer les lignes avec des valeurs manquantes (normalement aucune supprimmé)
+```{r , echo=FALSE}
+which(is.na(data))
+data <- na.omit(data)
+```
+on applique les bons types de variables
+```{r}
+data$category <- as.factor(data$category)
+data$content <- as.character(data$content)
+str(data)
+```
+On a besoin d'un objet de type corpus, 
+on prend là ou sont les données, ici la collone V6.
+On affiche la première ligne
+```{r}
+contenu <- Corpus(VectorSource(data$content))
+contenu[1]$content
 
 ```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
 
 # Présentation des données
 
