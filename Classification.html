@@ -1575,7 +1575,7 @@ str(data)</code></pre>
 <pre class="r"><code>contenu &lt;- Corpus(VectorSource(data$content))
 contenu[1]$content</code></pre>
 <pre><code>## [1] &quot;  / L’international français Jérémy Ménez va rejoindre le club de Bordeaux en Ligue 1, en provenance du Milan AC, sous réserve de la traditionnelle visite médicale, a annoncé le club aquitain dimanche. /  Ménez est la troisième recrue des Girondins après le milieu de Monaco, Jérémy Toulalan, et l’attaquant guinéen de Bastia, François Kamano. Bordeaux sort d’une pâle saison et repart avec des ambitions nouvelles et l’entraîneur Jocelyn Gourvennec, qui jouit d’une grosse cote grâce à ses six saisons convaincantes à Guingamp. Âgé de 29 ans, Ménez, qui compte 24 sélections (2 buts) chez les Bleus -la dernière en 2013-, évoluait depuis deux ans au Milan AC, où il lui restait un an de contrat, mais sa dernière saison a été perturbée par des blessures. Formé à Sochaux, Ménez fait partie de la fameuse génération 1987 championne d’Europe des U17 en 2004. Alors considéré comme un des plus grands espoirs du foot français, il avait par la suite rejoint Monaco de 2006 à 2008, puis la Roma pendant quatre saisons avant de revenir en France, au Paris-Saint-Germain en 2012. Son aventure parisienne, avec deux titres de champion à la clé, avait pris fin deux ans plus tard pour un retour en Italie, au Milan AC. Au sein de l’équipe lombarde il a réalisé sa meilleure saison (16 buts inscrits) en 2014-2015, avant d’être perturbé par des blessures au dos la saison dernière qui l’ont privé de sept mois de compétition, d’août à janvier, pour ne disputer que 10 matchs (2 buts).&quot;</code></pre>
-<p>On supprime les caracteres qui ne sont pas des lettres, problème : les accents sont supprimés</p>
+<p>On supprime les caracteres qui ne sont pas des lettres, problème : les caractères à accents sont supprimés</p>
 <pre class="r"><code>contenu &lt;- tm_map(contenu, content_transformer(gsub), pattern = &quot;[^a-zA-Z]&quot;, replacement = &quot; &quot;)</code></pre>
 <pre><code>## Warning in tm_map.SimpleCorpus(contenu, content_transformer(gsub), pattern =
 ## &quot;[^a-zA-Z]&quot;, : transformation drops documents</code></pre>
@@ -1597,6 +1597,33 @@ contenu &lt;- tm_map(contenu, removeWords , stopwords_fr)</code></pre>
 ## transformation drops documents</code></pre>
 <pre class="r"><code>contenu[1]$content</code></pre>
 <pre><code>## [1] &quot;     international fran ais   my  nez va rejoindre  club  bordeaux  ligue     provenance  milan ac  sous  serve   traditionnelle visite  dicale   annonc   club aquitain dimanche      nez   troisi  recrue  girondins apr   milieu  monaco    my toulalan    attaquant guin   bastia  fran ois kamano  bordeaux sort     saison  repart   ambitions nouvelles   entra neur jocelyn gourvennec   jouit   grosse cote gr     six saisons convaincantes   guingamp         ans   nez   compte     lections    buts  chez  bleus   derni re          voluait depuis deux ans  milan ac      restait  an  contrat    derni re saison     perturb    blessures  form    sochaux   nez fait partie   fameuse   ration      championne  europe            alors consid   comme   plus grands espoirs  foot fran ais      suite rejoint monaco               puis  roma pendant quatre saisons avant  revenir  france   paris saint germain         aventure parisienne   deux titres  champion    cl    pris fin deux ans plus tard   retour  italie   milan ac   sein    quipe lombarde    alis   meilleure saison     buts inscrits              avant   tre perturb    blessures  dos  saison derni re    priv   sept mois  comp tition   ao    janvier    disputer     matchs    buts  &quot;</code></pre>
+<p>Racinisation (sans retirer le premier espace)</p>
+<pre class="r"><code>contenu &lt;- tm_map(contenu, stemDocument, &quot;french&quot;)</code></pre>
+<pre><code>## Warning in tm_map.SimpleCorpus(contenu, stemDocument, &quot;french&quot;): transformation
+## drops documents</code></pre>
+<pre class="r"><code>contenu[1]$content</code></pre>
+<pre><code>## [1] &quot;international fran ais my nez va rejoindr club bordeau ligu proven milan ac sous serv traditionnel visit dical annonc club aquitain dimanch nez trois recru girondin apr milieu monaco my toulalan attaqu guin basti fran ois kamano bordeau sort saison repart ambit nouvel entra neur jocelyn gourvennec jou gross cot gr six saison convainc guingamp an nez compt lection but chez bleus dern re volu depuis deux an milan ac rest an contrat dern re saison perturb blessur form sochal nez fait part fameux ration champion europ alor consid comm plus grand espoir foot fran ais suit rejoint monaco puis rom pend quatr saison avant reven franc paris saint germain aventur parisien deux titr champion cl pris fin deux an plus tard retour ital milan ac sein quip lombard alis meilleur saison but inscrit avant tre perturb blessur dos saison dern re priv sept mois comp tition ao janvi disput match but&quot;</code></pre>
+<pre class="r"><code>contenu &lt;- tm_map(contenu , stripWhitespace)</code></pre>
+<pre><code>## Warning in tm_map.SimpleCorpus(contenu, stripWhitespace): transformation drops
+## documents</code></pre>
+<pre class="r"><code>contenu &lt;- tm_map(contenu, content_transformer(gsub), pattern = &quot;^\\s+&quot;, replacement = &quot;&quot;)</code></pre>
+<pre><code>## Warning in tm_map.SimpleCorpus(contenu, content_transformer(gsub), pattern = &quot;^\
+## \s+&quot;, : transformation drops documents</code></pre>
+<pre class="r"><code>contenu[1]$content</code></pre>
+<pre><code>## [1] &quot;international fran ais my nez va rejoindr club bordeau ligu proven milan ac sous serv traditionnel visit dical annonc club aquitain dimanch nez trois recru girondin apr milieu monaco my toulalan attaqu guin basti fran ois kamano bordeau sort saison repart ambit nouvel entra neur jocelyn gourvennec jou gross cot gr six saison convainc guingamp an nez compt lection but chez bleus dern re volu depuis deux an milan ac rest an contrat dern re saison perturb blessur form sochal nez fait part fameux ration champion europ alor consid comm plus grand espoir foot fran ais suit rejoint monaco puis rom pend quatr saison avant reven franc paris saint germain aventur parisien deux titr champion cl pris fin deux an plus tard retour ital milan ac sein quip lombard alis meilleur saison but inscrit avant tre perturb blessur dos saison dern re priv sept mois comp tition ao janvi disput match but&quot;</code></pre>
+<p>Vectorisation 20 occurences minimum</p>
+<pre class="r"><code>dtm &lt;- DocumentTermMatrix(contenu)
+
+minfreq &lt;- findFreqTerms(dtm , 20) 
+
+dtm &lt;- DocumentTermMatrix(contenu, control=list(dictionary = minfreq, weighting= weightTf)) </code></pre>
+<pre><code>## Warning in TermDocumentMatrix.SimpleCorpus(x, control): custom functions are
+## ignored</code></pre>
+<pre class="r"><code>base_modele &lt;- data.frame(as.matrix(dtm))
+
+head(base_modele[1,1:5])</code></pre>
+<pre><code>##   ais alis alor ambit annonc
+## 1   2    1    1     1      1</code></pre>
 <p>Le traitement de text effectué, on re-ajoute les données au tableau</p>
 <pre class="r"><code>data$content_modif = data.frame(text = sapply(contenu$content, as.character), stringsAsFactors = FALSE)[,1]</code></pre>
 </div>

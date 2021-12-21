@@ -109,7 +109,7 @@ contenu[1]$content
 ```
 
 On supprime les caracteres qui ne sont pas des lettres,
-problème : les accents sont supprimés
+problème : les caractères à accents sont supprimés
 ```{r}
 contenu <- tm_map(contenu, content_transformer(gsub), pattern = "[^a-zA-Z]", replacement = " ")
                  
@@ -135,13 +135,33 @@ contenu <- tm_map(contenu, removeWords , stopwords_fr)
 contenu[1]$content
 
 ```
-
+Racinisation (sans retirer le premier espace)
 ```{r}
+contenu <- tm_map(contenu, stemDocument, "french")
+contenu[1]$content
+
+contenu <- tm_map(contenu , stripWhitespace)
+contenu <- tm_map(contenu, content_transformer(gsub), pattern = "^\\s+", replacement = "")
+contenu[1]$content
+
+
 
 ```
 
+Vectorisation
+20 occurences minimum
+```{r}
+dtm <- DocumentTermMatrix(contenu)
 
+minfreq <- findFreqTerms(dtm , 20) 
 
+dtm <- DocumentTermMatrix(contenu, control=list(dictionary = minfreq, weighting= weightTf)) 
+
+base_modele <- data.frame(as.matrix(dtm))
+
+head(base_modele[1,1:5])
+
+```
 
 Le traitement de text effectué, on re-ajoute les données au tableau
 ```{r}
