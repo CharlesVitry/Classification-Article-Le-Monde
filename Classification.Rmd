@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 #tinytex::install_tinytex()
 ```
 
-# Présentation des données
+
 
 ## Import de la base de données & du jeu test
 ```{r}
@@ -31,34 +31,47 @@ test <-
 ```
 
 ## transformation des données
+Pour l’exercice l’élément positif est le fait d’être un article de type économie
+```{r}
+
+
+
+
+```
+
+##Présentation des données
+
+corrélations
 ```{r}
 
 ```
 
+distribution
 ```{r}
 
 ```
 
+# Premier modèle
 ```{r}
 
 ```
 
+# Deuxième modèle
 ```{r}
 
 ```
 
+# Troisième modèle
 ```{r}
 
 ```
 
+# Comparaison modèle
 ```{r}
 
 ```
 
-```{r}
-
-```
-
+# Mise en œuvre d’un modèle supervisé avec maximum 25 variables
 ```{r}
 
 ```
