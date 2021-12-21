@@ -1,12 +1,18 @@
 ---
 title: |
-  ![](RStudio_Logo){width=1in}  
+  ![](RStudio_Logo.png){width=125%}  
   Classification des articles du monde en fonction de leur contenu
 author: 
 - Charles Vitry
 - Clovis Deletre
 date: "[Fichiers de données et de test fournis](https://www.lemonde.fr/)"
-output: pdf_document
+output:
+  rmarkdown::html_document:
+    theme: cerulean
+    number_sections: no
+    toc: yes
+    toc_depth: 5
+    toc_float: true
 ---
 
 
@@ -71,6 +77,44 @@ contenu[1]$content
 
 ```
 
+On supprime les caracteres qui ne sont pas des lettres,
+problème : les accents sont supprimés
+```{r}
+contenu <- tm_map(contenu, content_transformer(gsub), pattern = "[^a-zA-Z]", replacement = " ")
+                 
+contenu[1]$content
+
+
+```
+On mets les majuscules en minuscules
+```{r}
+contenu <- tm_map(contenu, content_transformer(tolower))
+contenu[1]$content
+
+```
+
+
+On retire les lettres isolés et les mots "vides" tel "quand, comme, hors ..."
+```{r}
+stopwords_fr <- stopwords("french")
+stopwords_fr <- c(stopwords_fr, "a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t",
+                   "u","v","w","x","y","z" )
+
+contenu <- tm_map(contenu, removeWords , stopwords_fr)
+contenu[1]$content
+
+```
+
+
+
+
+Le traitement de text effectué, on re-ajoute les données au tableau
+```{r}
+data$content_modif = data.frame(text = sapply(contenu$content, as.character), stringsAsFactors = FALSE)[,1]
+
+```
+
+
 ```{r}
 
 ```
@@ -82,7 +126,6 @@ contenu[1]$content
 ```{r}
 
 ```
-
 
 
 # Présentation des données
