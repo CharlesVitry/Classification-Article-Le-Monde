@@ -78,7 +78,6 @@ data <-
 test <- 
   read.csv("~/Classification Article Le Monde/lignes_jeux_tests.csv")
 
-
 ```
 
 ## transformation des données
@@ -101,6 +100,14 @@ data$category <- as.factor(data$category)
 data$content <- as.character(data$content)
 str(data)
 ```
+
+
+On retire les accents
+```{r,echo=true,results='hide'}
+Encoding(data$content)
+data$content <- iconv(data$content,from="UTF-8",to="ASCII//TRANSLIT")
+
+```
 On a besoin d'un objet de type corpus, 
 on prend là ou sont les données, ici la collone V6.
 On affiche la première ligne
@@ -110,8 +117,9 @@ contenu[1]$content
 
 ```
 
+
+
 On supprime les caracteres qui ne sont pas des lettres,
-problème : les caractères à accents sont supprimés
 ```{r}
 contenu <- tm_map(contenu, content_transformer(gsub), pattern = "[^a-zA-Z]", replacement = " ")
                  
@@ -172,9 +180,7 @@ data$content_modif = data.frame(text = sapply(contenu$content, as.character), st
 ```
 
 
-```{r}
 
-```
 
 ```{r}
 
