@@ -61,9 +61,39 @@ require(tm)
 if(!require(wordcloud2)) install.packages("wordcloud2", repos = "http://cran.us.r-project.org")
 require(wordcloud2)
 
-
 if(!require(randomForest)) install.packages("randomForest", repos = "http://cran.us.r-project.org")
 require(randomForest)
+
+if(!require(SnowballC)) install.packages("SnowballC", repos = "http://cran.us.r-project.org")
+require(SnowballC)
+
+
+if(!require(sparkline)) install.packages("sparkline", repos = "http://cran.us.r-project.org")
+require(sparkline)
+
+
+# Construction de l'arbre
+if(!require(rpart)) install.packages("rpart", repos = "http://cran.us.r-project.org")
+require(rpart)
+
+# Visualisation de l'arbre
+
+if(!require(visNetwork)) install.packages("visNetwork", repos = "http://cran.us.r-project.org")
+require(visNetwork)
+
+
+# Evaluation des modèles 
+
+if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
+require(caret)
+ 
+#Import required library
+library(caret)
+
+
+if(!require(ROCR)) install.packages("ROCR", repos = "http://cran.us.r-project.org")
+require(ROCR)
+
 ```
 
 
@@ -73,10 +103,10 @@ require(randomForest)
 On utilise l'encodage UTF-8 car le monde est un journal français utilisant des caractères spéciaux.
 ```{r}
 data <- 
-   read.csv("~/Classification Article Le Monde/le_monde.csv", encoding="UTF-8", sep=";", comment.char="#")
+   read.csv("le_monde.csv", encoding="UTF-8", sep=";", comment.char="#")
 
 test <- 
-  read.csv("~/Classification Article Le Monde/lignes_jeux_tests.csv")
+  read.csv("lignes_jeux_tests.csv")
 
 ```
 
@@ -159,11 +189,11 @@ contenu[1]$content
 ```
 
 Vectorisation
-20 occurences minimum
+1000 occurences minimum
 ```{r}
 dtm <- DocumentTermMatrix(contenu)
 
-minfreq <- findFreqTerms(dtm , 20) 
+minfreq <- findFreqTerms(dtm , 1000) 
 
 dtm <- DocumentTermMatrix(contenu, control=list(dictionary = minfreq, weighting= weightTf)) 
 
@@ -173,9 +203,30 @@ head(base_modele[1,1:5])
 
 ```
 
-Le traitement de text effectué, on re-ajoute les données au tableau
+```{r}
+
+```
+
+
+Le traitement de text effectué, on re-ajoute les données au tableau en gardant les colonnes qu'on a besoin :
 ```{r}
 data$content_modif = data.frame(text = sapply(contenu$content, as.character), stringsAsFactors = FALSE)[,1]
+
+
+
+mots <-paste(data[data$category =="1", "content_modif"], collapse = "")
+print <- substr(mots, start=1, stop=100)
+motsFreq <- data.frame(sort(table(strsplit(mots,"\\s+")),decreasing=TRUE)) 
+head(motsFreq)
+#wordcloud2(data = motsFreq[1:500,],minSize = 5, size = 3)
+
+
+
+
+base_modelisation = cbind.data.frame(data, base_modele)
+base_modelisation = base_modelisation[,-2]
+base_modelisation = base_modelisation[,-2]
+base_modelisation
 
 ```
 
@@ -193,6 +244,10 @@ data$content_modif = data.frame(text = sapply(contenu$content, as.character), st
 
 # Présentation des données
 
+Variables à expliquer : culture, economie, planete, politique, societe, sport.
+
+439 Variables explicatives : les mots qui apparaissent plus de 1000 fois.
+
 Nous n'effectuons que la dernière partie d'un projet de Data Science : la modélisation,
 cette étape constitue 5 à 20% du temps consacré à un ce type de projet.
 
@@ -203,8 +258,10 @@ corrélations
 
 distribution
 ```{r}
-
+#summary(base_modelisation)
 ```
+
+
 
 #Modèle Supervisé
 Apprentissage supervisé: expliquer/prédire  une sortie Y à partir d’entrées X 
@@ -213,16 +270,101 @@ Nous devons éviter le sur-apprentissage.
 Modèle supervisé pouvant être utilisé : CART , randomforest, régression linéaire
 
 
+On commence par construire un modèle d'apprentissage, composé de 80% des lignes de base_modelisation.
+
+```{r}
+nb_lignes <- sample(1:nrow(base_modelisation), nrow(base_modelisation)*0.80)
+```
+
 
 ## Premier modèle
+Modélisation : Arbre, algorithme : CART
+
+
+Le principe est que, tant qu'on a pas atteind la taille minimal de noeuds enfants on recherche un seuil qui permet de séparer le noeud parents en 2 noeuds enfants en maximisant le gain d'impureté*
+
+Gain d'impureté : trouver une def + simple 
+
+```{r}
+tree <-rpart(category~. , data = base_modelisation[nb_lignes,], cp=0, minsplit = 10)
+
+visTree(tree)
+```
+
+On recherche le cp adapté (à revoir)
+
 ```{r}
 
+
+
 ```
+
+Evaluation, matrice de confusion :
+```{r}
+p <- predict(tree, newdata=base_modelisation[-nb_lignes,], type= "class")
+length(p)
+
+conf <- confusionMatrix(data=p, reference = base_modelisation[-nb_lignes,]$category)
+conf
+
+```
+AUC
+
+```{r}
+library(ROCR)
+library(pROC)
+
+p1 <- predict(tree, newdata=base_modelisation[-nb_lignes,], type= "prob")
+p1 <- p1[,1]
+
+
+length(base_modelisation[-nb_lignes,]$category)
+
+auc(base_modelisation[-nb_lignes,]$category, p1)
+```
+
+
+
+
 
 ## Deuxième modèle
+Modélisation : Random Forest, algorithme de bagging 
+
+
+Le principe est de créer n arbres non corrélés entre eux puis faire voter chacun d'entre eux.
+
+Pour faire varier un arbre on sélectionne une partie différente des données à chaque noeud et ne construisant des arbres que sur une partie des individus
+
+Ici :
+- mtry : 20
+- nbtree: 500
+- 
+
 ```{r}
 
+#modele_rf <- randomForest(x=base_modelisation[nb_lignes,-58], y = base_modelisation[nb_lignes,58], ntree=100)
+#print(modele_rf)
+
+
+modele_rf = randomForest(category~. , data=base_modelisation[nb_lignes,], importance = T, ntree = 100)
+modele_rf
+plot(modele_rf)
+
 ```
+
+AUC
+```{r}
+p1 <- predict(modele_rf, newdata=base_modelisation[-nb_lignes,], type= "prob")
+p1 <- p1[,1]
+
+
+length(base_modelisation[-nb_lignes,]$category)
+
+auc(base_modelisation[-nb_lignes,]$category, p1)
+
+
+```
+
 
 ## Troisième modèle
 ```{r}
@@ -230,6 +372,12 @@ Modèle supervisé pouvant être utilisé : CART , randomforest, régression lin
 ```
 
 ## Comparaison modèle
+```{r}
+
+```
+```{r}
+
+```
 ```{r}
 
 ```
