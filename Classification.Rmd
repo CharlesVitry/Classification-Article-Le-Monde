@@ -133,7 +133,7 @@ str(data)
 
 
 On retire les accents
-```{r,echo=true,results='hide'}
+```{r, echo=TRUE}
 Encoding(data$content)
 data$content <- iconv(data$content,from="UTF-8",to="ASCII//TRANSLIT")
 
@@ -190,7 +190,7 @@ contenu[1]$content
 
 Vectorisation
 1000 occurences minimum
-```{r}
+```{r, warning=FALSE,echo=TRUE}
 dtm <- DocumentTermMatrix(contenu)
 
 minfreq <- findFreqTerms(dtm , 1000) 
@@ -209,7 +209,7 @@ head(base_modele[1,1:5])
 
 
 Le traitement de text effectué, on re-ajoute les données au tableau en gardant les colonnes qu'on a besoin :
-```{r}
+```{r, echo= TRUE}
 data$content_modif = data.frame(text = sapply(contenu$content, as.character), stringsAsFactors = FALSE)[,1]
 
 
@@ -226,7 +226,7 @@ head(motsFreq)
 base_modelisation = cbind.data.frame(data, base_modele)
 base_modelisation = base_modelisation[,-2]
 base_modelisation = base_modelisation[,-2]
-base_modelisation
+#base_modelisation
 
 ```
 
