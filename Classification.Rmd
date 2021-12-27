@@ -111,6 +111,12 @@ test <-
 ```
 
 ## transformation des données
+
+Il est nécessaire de transformer ces données, nous n'avons qu'une unique variable explicative : le texte en entier de l'article.
+Cette unique variable explicative est inexploitable, 
+
+
+
 Pour l’exercice l’élément positif est le fait d’être un article de type économie
 
 Suppression des deux collones non utiles à la modélisation
@@ -209,7 +215,7 @@ head(base_modele[1,1:5])
 
 
 Le traitement de text effectué, on re-ajoute les données au tableau en gardant les colonnes qu'on a besoin :
-```{r, echo= TRUE}
+```{r, echo= FALSE}
 data$content_modif = data.frame(text = sapply(contenu$content, as.character), stringsAsFactors = FALSE)[,1]
 
 
@@ -251,16 +257,39 @@ Variables à expliquer : culture, economie, planete, politique, societe, sport.
 Nous n'effectuons que la dernière partie d'un projet de Data Science : la modélisation,
 cette étape constitue 5 à 20% du temps consacré à un ce type de projet.
 
-corrélations
+
+Avant de réaliser des modèles de prédictions, détaillons le jeu de données transformé obtenu.
+Premièrement, visualisons graphiquement si nos variables sont très corrélés avec une heatmap : 
 ```{r}
+source("http://www.sthda.com/upload/rquery_cormat.r")
+ 
+rquery.cormat(base_modelisation[, c(2:440)],graphType="heatmap")
+```
+Pour complèter cela, on réalise une analyse en composante principale
+```{r}
+#ces deux lignes sont marginales
+base_modelisation_ACP <- base_modelisation[-c(8808,5857), ]
+
+
+library(FactoMineR)
+res.pca = PCA(base_modelisation_ACP, scale.unit=TRUE, ncp=5, quali.sup=1, graph=T)
+plot.PCA(res.pca, axes=c(1, 2), choix="ind", habillage=1,label="var")
+
+
+
+#Essayons de dégager une tendance avec les catégories
+
+library("factoextra")
+
+fviz_pca_ind(res.pca, geom.ind = "point", col.ind = base_modelisation_ACP$category, 
+             palette = c("#00AFBB", "#E7B800", "#FC4E07", "#33FF5E","#CC33FF", "#FFC233"  ),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             legend.title = "Catégorie de l'article"
+)
 
 ```
-
-distribution
-```{r}
-#summary(base_modelisation)
-```
-
+Les deux premières dimensions ne rendent compte que de 10% de la variance, les graphiques sont  inexploitables.
+Nous pouvons affirmer que les données sont très dispersés.
 
 
 #Modèle Supervisé
@@ -271,6 +300,7 @@ Modèle supervisé pouvant être utilisé : CART , randomforest, régression lin
 
 
 On commence par construire un modèle d'apprentissage, composé de 80% des lignes de base_modelisation.
+Le jeu de test est quand à lui fourni.
 
 ```{r}
 nb_lignes <- sample(1:nrow(base_modelisation), nrow(base_modelisation)*0.80)
@@ -281,9 +311,10 @@ nb_lignes <- sample(1:nrow(base_modelisation), nrow(base_modelisation)*0.80)
 Modélisation : Arbre, algorithme : CART
 
 
-Le principe est que, tant qu'on a pas atteind la taille minimal de noeuds enfants on recherche un seuil qui permet de séparer le noeud parents en 2 noeuds enfants en maximisant le gain d'impureté*
+Le principe est que, tant qu'on a pas atteind la taille minimal de noeuds enfants on recherche un seuil qui permet de séparer le noeud parents en 2 noeuds enfants en maximisant notre critère de répartition/de fractionnement.
 
-Gain d'impureté : trouver une def + simple 
+Notre critère de répartition est le GINI.
+
 
 ```{r}
 tree <-rpart(category~. , data = base_modelisation[nb_lignes,], cp=0, minsplit = 10)
@@ -294,14 +325,22 @@ visTree(tree)
 On recherche le cp adapté (à revoir)
 
 ```{r}
-
-
-
+plotcp(tree)
 ```
+
+```{r}
+Besttree <-rpart(category~. , data = base_modelisation[nb_lignes,], cp=8e-04, minsplit = 10)
+
+visTree(Besttree)
+```
+
+
+
+
 
 Evaluation, matrice de confusion :
 ```{r}
-p <- predict(tree, newdata=base_modelisation[-nb_lignes,], type= "class")
+p <- predict(Besttree, newdata=base_modelisation[-nb_lignes,], type= "class")
 length(p)
 
 conf <- confusionMatrix(data=p, reference = base_modelisation[-nb_lignes,]$category)
@@ -314,7 +353,7 @@ AUC
 library(ROCR)
 library(pROC)
 
-p1 <- predict(tree, newdata=base_modelisation[-nb_lignes,], type= "prob")
+p1 <- predict(Besttree, newdata=base_modelisation[-nb_lignes,], type= "prob")
 p1 <- p1[,1]
 
 
@@ -346,7 +385,6 @@ Ici :
 #print(modele_rf)
 
 
-modele_rf = randomForest(category~. , data=base_modelisation[nb_lignes,], importance = T, ntree = 100)
 modele_rf
 plot(modele_rf)
 
@@ -362,12 +400,19 @@ length(base_modelisation[-nb_lignes,]$category)
 
 auc(base_modelisation[-nb_lignes,]$category, p1)
 
-
 ```
+Observons quelles variables sont les plus importantes.
+```{r}
+modele_rf$importance[order(modele_rf$importance[,1], decreasing = TRUE), ]
+```
+
+
 
 
 ## Troisième modèle
 ```{r}
+
+
 
 ```
 
