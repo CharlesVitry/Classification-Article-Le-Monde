@@ -190,8 +190,6 @@ contenu <- tm_map(contenu , stripWhitespace)
 contenu <- tm_map(contenu, content_transformer(gsub), pattern = "^\\s+", replacement = "")
 contenu[1]$content
 
-
-
 ```
 
 Vectorisation
@@ -212,6 +210,7 @@ base_modele <- data.frame(as.matrix(dtm))
 
 Le traitement de text effectué, on re-ajoute les données au tableau data pour comparer le texte de départ et le texte obtenu :
 ```{r, echo= FALSE}
+
 data$content_modif = data.frame(text = sapply(contenu$content, as.character), stringsAsFactors = FALSE)[,1]
 ```
 Le texte obtenu est correct.
@@ -241,10 +240,11 @@ base_modelisation = base_modelisation[,-2]
 base_modelisation = base_modelisation[,-2]
 ```
 
-On prépare le jeu à 25 variables
+
 ```{r}
-Somme <- colSums(base_modele)
-garder <- which(Somme > median(Somme))
+#On prépare le jeu à 25 variables
+#Somme <- colSums(base_modele)
+#garder <- which(Somme > median(Somme))
 ```
 
 
@@ -376,7 +376,7 @@ cpBest <- tree$cptable[Meilleur, "CP"]
 ArbreChoisi <- prune(tree, cp = cpBest)
 visTree(ArbreChoisi)
 
-
+#Mauvaise méthode puisque le meilleur cp change d'une exécution à l'autre du code
 #Besttree <-rpart(category~. ,
 #                 data = base_modelisation[nb_lignes,],
 #                cp=8e-04,
@@ -420,8 +420,7 @@ AUC
 library(ROCR)
 library(pROC)
 
-p1 <- predict(ArbreChoisi, newdata=base_modelisation[-nb_lignes,], type= "prob")
-p1 <- p1[,1]
+p1 <- predict(ArbreChoisi, newdata=base_modelisation[-nb_lignes,], type= "prob")[,1]
 
 
 length(base_modelisation[-nb_lignes,]$category)
@@ -480,28 +479,9 @@ plot(modele_rf)
 ```
 
 
-Observons quelles variables sont les plus importantes.
-Et l'importances des plots
-```{r,results='hide'}
-modele_rf$importance[order(modele_rf$importance[,1], decreasing = TRUE)[1:5], ]
-varImpPlot(modele_rf)
-```
-
-Fréquence conditionel
-```{r}
-table(predict(modele_rf), base_modelisation[nb_lignes,]$category)
-
-```
-
-
-
-
 Prediction
 ```{r}
-p1 <- predict(modele_rf, newdata=base_modelisation[-nb_lignes,], type= "prob")
-
-
-p2 <- p1[,1]
+p2 <- predict(modele_rf, newdata=base_modelisation[-nb_lignes,], type= "prob")[,1]
 
 ```
 
@@ -510,7 +490,11 @@ Test Prediction
 table(p2, base_modelisation[-nb_lignes,]$category)[1,]
 
 ```
+Fréquence conditionel
+```{r}
+table(predict(modele_rf), base_modelisation[nb_lignes,]$category)
 
+```
 
 ```{r}
 
@@ -524,18 +508,26 @@ AUC
 ```{r}
 length(base_modelisation[-nb_lignes,]$category)
 
-auc(base_modelisation[-nb_lignes,]$category, p1)
+auc(base_modelisation[-nb_lignes,]$category, p2)
 ```
 Un AUC de 0.90 a été obtenu
 
+```{r}
 
+#Visualisation de la prédiction
+
+plot(p2 ~ category, data=base_modelisation[-nb_lignes,], xlab="Observe",
+       ylab="Predis")
+
+```
 
 ## Troisième modèle
 
 
 Créons plusieurs modèle avec des mtry allant de 1 variables à toutes.
+En tout 50 configurations seront testés.
 ```{r}
-mtry_expand = expand.grid( .mtry = seq(from = 1, to = (ncol(base_modelisation[nb_lignes,])-1), length.out = 2))
+mtry_expand = expand.grid( .mtry = seq(from = 1, to = (ncol(base_modelisation[nb_lignes,])-1), length.out = 50))
 #length.out : premier multiplieur
 ```
 
@@ -573,7 +565,7 @@ cv.cntrl <- trainControl(method = "cv",
                       y = base_modelisation[nb_lignes,]$category, 
                       method = 'rf', trControl = cv.cntrl, 
                       tuneGrid = mtry_expand, metric = "Accuracy",
-                      ntree = 2)
+                      ntree = 100)
     #ntree est notre dernier multiplieur.
   
   # Processing is done, stop the cluster
@@ -582,63 +574,133 @@ cv.cntrl <- trainControl(method = "cv",
 
 ```
 
-
-On sélectionne alors les meilleurs paramètres
+Quel est le meilleur paramètre pour mtry
 ```{r}
 modele3_mtry <- modele3$bestTune$mtry
-modele3_best <- modele3$results %>% filter(mtry==modele3_mtry)
+#modele3_best <- modele3$results %>% filter(mtry==modele3_mtry)
+
+#le meilleur mtry est de :
+modele3_mtry
 ```
 
 On affiche le modèle obtenu
 ```{r}
-plot(modele3_best)
+plot(modele3)
+plot(modele3$finalModel$predicted)
 ```
 
-
-
-
-```{r}
-
-```
 Prédiction
 ```{r}
-p3 <- predict(modele3, newdata=base_modelisation[-nb_lignes,])
+library(ROCR)
+library(pROC)
+
+p3 <- predict(modele3, newdata=base_modelisation[-nb_lignes,], type= "prob")
+p3 <- p3[,1]
 
 
-require(ROCR)
+
+```
+Matrice de confusion
+```{r}
+MatriceConfu3 <- confusionMatrix(data = modele3$finalModel$predicted,
+                                reference = base_modelisation[nb_lignes,]$category)
+
+
+#labels <- c("Precision", "Recall", "F1", "Accuracy", "Kappa")
+#confu3 <- MatriceConfu3$byClass[labels[1:3]]
+#confu3 <- c(confu3, MatriceConfu3$overall[labels[4:5]])
+
+MatriceConfu3
+
+```
+
+AUC
+```{r}
+length(base_modelisation[-nb_lignes,]$category)
+
 auc(base_modelisation[-nb_lignes,]$category, p3)
 ```
 
+```{r}
+#Visualisation de la prédiction
+
+plot(p3 ~ category, data=base_modelisation[-nb_lignes,], xlab="Observe",
+       ylab="Predis")
+
+```
 
 
 ## Comparaison modèle
-```{r}
-
-```
 
 
 
 
-```{r}
 
-```
 
 ## Mise en œuvre d’un modèle supervisé avec maximum 25 variables
+
+
+On sélectionne les 25 variables les plus importantes parmis le 2ème modèle (random Forest)
+Ainsi qu'une visualisation graphique de leur importance.
 ```{r}
+#class (modele_rf$importance[order(modele_rf$importance[,1], decreasing = TRUE)[1:25], ])
+#"matrix" "array" 
 
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
+modele_rf$importance[order(modele_rf$importance[,1], decreasing = TRUE)[1:25], ]
+varImpPlot(modele_rf)
 ```
 
 
 
+```{r}
+ #copie des termes dans l'attente de trouver une méthode pour récup les variables d'une matrice.                         
+modele_25 = randomForest(category~ selon + film + loi + entrepris + president + ete + ministr + festival + scen + gouvern + contr + franc + match + person + art + general + social + equip + droit + national + etat + final + econom + plac
+                         , data=base_modelisation[nb_lignes,],
+                         importance = T,
+                         proximity=TRUE,
+                         ntree = 100)
+
+plot(modele_25)
+
+
+
+```
+Prediction
+```{r}
+p4 <- predict(modele_25, newdata=base_modelisation[-nb_lignes,], type= "prob")[,1]
+
+```
+
+Test Prediction
+```{r}
+table(p4, base_modelisation[-nb_lignes,]$category)[1,]
+
+```
+
+Fréquence conditionel
+```{r}
+table(predict(modele_25), base_modelisation[nb_lignes,]$category)
+
+```
+
+AUC
+```{r}
+length(base_modelisation[-nb_lignes,]$category)
+
+auc(base_modelisation[-nb_lignes,]$category, p4)
+
+
+```
+Une perte d'environ 0.04 d'AUC pour un passage de 440 variables à 25.
+```{r}
+#Visualisation de la prédiction
+
+plot(p2 ~ category, data=base_modelisation[-nb_lignes,], xlab="Observe",
+       ylab="Predis")
+```
+
+
+# Conclusion
+
+Nos 3 modèles sont utilisables.
+La forte réduction du nombre de variable sur le modèle randomForest a eu un impact mineur sur l'AUC.
