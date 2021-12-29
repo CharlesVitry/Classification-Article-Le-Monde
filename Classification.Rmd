@@ -55,6 +55,10 @@ knitr::opts_chunk$set(echo = TRUE)
 #install for export in pdf file
 #tinytex::install_tinytex()
 
+if(!require(factoextra)) install.packages("tm", repos = "http://cran.us.r-project.org")
+require(factoextra)
+
+
 if(!require(tm)) install.packages("tm", repos = "http://cran.us.r-project.org")
 require(tm)
 
@@ -82,6 +86,11 @@ if(!require(visNetwork)) install.packages("visNetwork", repos = "http://cran.us.
 require(visNetwork)
 
 
+# Test modèle KNN
+
+if(!require(class)) install.packages("tm", repos = "http://cran.us.r-project.org")
+require(class)
+
 # Evaluation des modèles 
 
 if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
@@ -96,11 +105,25 @@ require(ROCR)
 
 ```
 
+Nous souhaitons classifier un article du monde selon son contenu,
+Nous possèdons pour cela un jeu de données avec la catégorie et le contenu de 10k articles.
+
+Pour mener notre tâche à bien nous allons effectuer un prétraitement des données textuelles par la transformation de données (textuelles) non structurées en un format de données structuré.
+
+Et ce dans l'objectif d'appliquer des algorithmes de classifications, cela inclut la pondération et la sélection des variables(des mots). 
+
+Concrètement, il s'agit de la transformation d'un grand nombre de caractéristiques éparses en un nombre significativement plus petit de caractéristiques denses. 
+
+Nous utiliserons ainsi 3 algorithmes pour la classification dont un dans une version limitée à 25 variables explicatives.
+
+Nous finirons par l'évaluation des résultats de la prédiction des classifications sur le jeu de test.
+
 
 
 ## Import de la base de données & du jeu test
 
 On utilise l'encodage UTF-8 car le monde est un journal français utilisant des caractères spéciaux.
+Le jeu de test est fournis, il a pour élément positif le fait d’être un article de type économie
 ```{r}
 data <- 
    read.csv("le_monde.csv", encoding="UTF-8", sep=";", comment.char="#")
@@ -111,7 +134,10 @@ test <-
 ```
 
 ## transformation des données
-Pour l’exercice l’élément positif est le fait d’être un article de type économie
+
+Il est nécessaire de transformer ces données, nous n'avons qu'une unique variable explicative : le texte en entier de l'article.
+Cette unique variable explicative est inexploitable, nous souhaitons un "bag of words".
+
 
 Suppression des deux collones non utiles à la modélisation
 ```{r}
@@ -119,12 +145,13 @@ data$date <- NULL
 data$title <- NULL
 ```
 
-Supprimer les lignes avec des valeurs manquantes (normalement aucune supprimmé)
+Pour la gestion des manquants,
+on supprime les lignes avec des valeurs manquantes (normalement aucune supprimmé)
 ```{r , echo=FALSE}
 which(is.na(data))
 data <- na.omit(data)
 ```
-on applique les bons types de variables
+On applique les bons types de variables
 ```{r}
 data$category <- as.factor(data$category)
 data$content <- as.character(data$content)
@@ -132,12 +159,15 @@ str(data)
 ```
 
 
-On retire les accents
-```{r,echo=true,results='hide'}
-Encoding(data$content)
+On retire les accents,
+en effet dans l'une des étapes suivantes où l'on retire les caractères qui ne sont pas des lettres,
+les lettres avec accents font des trous dans les mots, rendant un grand nombre de mots inexploitable.
+```{r, echo=FALSE}
+#Encoding(data$content)
 data$content <- iconv(data$content,from="UTF-8",to="ASCII//TRANSLIT")
 
 ```
+
 On a besoin d'un objet de type corpus, 
 on prend là ou sont les données, ici la collone V6.
 On affiche la première ligne
@@ -149,7 +179,7 @@ contenu[1]$content
 
 
 
-On supprime les caracteres qui ne sont pas des lettres,
+On supprime les caracteres qui ne sont pas des lettres (cette étape posait problème avec les lettres à accent)
 ```{r}
 contenu <- tm_map(contenu, content_transformer(gsub), pattern = "[^a-zA-Z]", replacement = " ")
                  
@@ -184,13 +214,12 @@ contenu <- tm_map(contenu , stripWhitespace)
 contenu <- tm_map(contenu, content_transformer(gsub), pattern = "^\\s+", replacement = "")
 contenu[1]$content
 
-
-
 ```
 
 Vectorisation
-1000 occurences minimum
-```{r}
+
+Nous ne gardons que les mots avec 1000 occurences minimum
+```{r, warning=FALSE,echo=FALSE}
 dtm <- DocumentTermMatrix(contenu)
 
 minfreq <- findFreqTerms(dtm , 1000) 
@@ -199,46 +228,47 @@ dtm <- DocumentTermMatrix(contenu, control=list(dictionary = minfreq, weighting=
 
 base_modele <- data.frame(as.matrix(dtm))
 
-head(base_modele[1,1:5])
-
-```
-
-```{r}
+#head(base_modele[1,1:5])
 
 ```
 
 
-Le traitement de text effectué, on re-ajoute les données au tableau en gardant les colonnes qu'on a besoin :
-```{r}
+Le traitement de text effectué, on re-ajoute les données au tableau data pour comparer le texte de départ et le texte obtenu :
+```{r, echo= FALSE}
 data$content_modif = data.frame(text = sapply(contenu$content, as.character), stringsAsFactors = FALSE)[,1]
+```
+Le texte obtenu est correct.
+
+Combien de fois les mots (variables) ont d'occurence dans le contenu des articles ?
+```{r}
+summary(colSums(base_modele))
+```
+On remarque une médiane à 1612 la haute valeur du maximum est surement dû à des mots vides (stop words) non retirer.
+Nous étudierons un modèle avec moins de variables (mots) dans une prochaine partie.
+
+Testons notre hypothèse des stop words non retirer, en effet, il pourrait s'agir de mots apparaissant beaucoup dans une certaine catégorie 
+d'articles.
+Regardons dans combien d'articles les mots sont référencés (sur 10k articles)
+```{r}
+occurences <- apply(base_modele, 2, function(x) sum(x>0))
+summary(occurences)
+```
+Un maximum à 6237, soit 2/3 des documents.
+Nous verrons l'importance de ces mots dans le modèle lorsque nous réaliserons un modèle supervisé avec un maximum de 25 variables.
 
 
-
-mots <-paste(data[data$category =="1", "content_modif"], collapse = "")
-print <- substr(mots, start=1, stop=100)
-motsFreq <- data.frame(sort(table(strsplit(mots,"\\s+")),decreasing=TRUE)) 
-head(motsFreq)
-#wordcloud2(data = motsFreq[1:500,],minSize = 5, size = 3)
-
-
-
-
+On construit alors notre modèle avec les catégories et les mots en variables.
+```{r}
 base_modelisation = cbind.data.frame(data, base_modele)
 base_modelisation = base_modelisation[,-2]
 base_modelisation = base_modelisation[,-2]
-base_modelisation
-
 ```
 
 
-
-
 ```{r}
-
-```
-
-```{r}
-
+#On prépare le jeu à 25 variables
+#Somme <- colSums(base_modele)
+#garder <- which(Somme > median(Somme))
 ```
 
 
@@ -248,86 +278,218 @@ Variables à expliquer : culture, economie, planete, politique, societe, sport.
 
 439 Variables explicatives : les mots qui apparaissent plus de 1000 fois.
 
-Nous n'effectuons que la dernière partie d'un projet de Data Science : la modélisation,
-cette étape constitue 5 à 20% du temps consacré à un ce type de projet.
+A noter que nous n'effectuons que les dernières partie d'un projet de Data Science,
+puisque les données nous ont été fournis.
 
-corrélations
+Avant de réaliser des modèles de prédictions, détaillons le jeu de données transformé obtenu.
+Notre plus grande menace serait une corrélation globale de nos variables.
+
+Visualisons graphiquement si nos variables sont très corrélés avec une heatmap : 
+```{r message=FALSE, paged.print=FALSE, r,echo=FALSE}
+#source("http://www.sthda.com/upload/rquery_cormat.r")
+ 
+#rquery.cormat(base_modelisation[, c(2:440)],graphType="heatmap")
+```
+[](HeatMap.png)
+
+
+Les variables sont très peu corrélés, 
+
+
+Pour complèter cela, on réalise une analyse en composante principale avec la catégorie en variable qualitative, 
+ainsi en affichant les ellipse nous verrons les catégories qui s'opposent et quelles variables (les mots dans notre cas) sont les plus responsables des axes, autrement dit les plus importants.
+```{r message=FALSE}
+#ces deux lignes sont marginales et ne permettent pas de ce centrer sur les individus.
+base_modelisation_ACP <- base_modelisation[-c(8808,5857), ]
+
+
+library(FactoMineR)
+res.pca = PCA(base_modelisation_ACP, scale.unit=TRUE, ncp=5, quali.sup=1, graph=T)
+plot.PCA(res.pca, axes=c(1, 2), choix="ind", habillage=1,label="var")
+
+
+
+#Essayons de dégager une tendance avec les catégories
+
+#library("factoextra")
+
+#fviz_pca_ind(res.pca, geom.ind = "point", col.ind = base_modelisation_ACP$category, 
+ #            palette = c("#00AFBB", "#E7B800", "#FC4E07", "#33FF5E","#CC33FF", "#FFC233"  ),
+  #           addEllipses = TRUE, ellipse.type = "confidence",
+   #          legend.title = "Catégorie de l'article"
+#)
+
+```
+Les deux premières dimensions ne rendent compte que de 10% de la variance, les graphiques sont  inexploitables.
+Nous pouvons affirmer que les données sont très dispersés, leur non-corrélation est très forte.
+
+## Nuage de mots pour les catégories
+
+
+Une fois la non-corrélation globale de nos variables assurés,
+Examinons graphiquement grâce à la librairie wordcloud les mots les plus fréquents par catégorie par un nuage de mots.
+
 ```{r}
+
+#Preparation des données pour le nuage des catégories
+# on concatene tout le texte , on sélectionne la catégorie sport et spécicifie content_modif pour là où on prend le texte.
+motSport <- paste(data[data$category=="sport",'content_modif'],collapse=' ') 
+motSociete <- paste(data[data$category=="societe",'content_modif'],collapse=' ') 
+motEconomie <- paste(data[data$category=="economie",'content_modif'],collapse=' ') 
+motCulture <- paste(data[data$category=="culture",'content_modif'],collapse=' ') 
+motPolitique <- paste(data[data$category=="politique",'content_modif'],collapse=' ') 
+motPlanete <- paste(data[data$category=="planete",'content_modif'],collapse=' ') 
+
+# on compte chaque mot, le motif entre guillemet veut dire qu'on coupe la #chainedecaractère quelque soit le nombre d'espaces entre les mots, decreasing en true car il faut montrer les most les plus fréquents , donc on met en décroissant (voir la doc de sort)
+motsFreqSport <- data.frame(sort(table(strsplit(motSport,"\\s+")),decreasing = TRUE )) 
+motsFreqSociete <- data.frame(sort(table(strsplit(motSociete,"\\s+")),decreasing = TRUE )) 
+motsFreqEconomie <- data.frame(sort(table(strsplit(motEconomie,"\\s+")),decreasing = TRUE )) 
+motsFreqCulture <- data.frame(sort(table(strsplit(motCulture,"\\s+")),decreasing = TRUE )) 
+motsFreqPolitique <- data.frame(sort(table(strsplit(motPolitique,"\\s+")),decreasing = TRUE )) 
+motsFreqPlanete <- data.frame(sort(table(strsplit(motPlanete,"\\s+")),decreasing = TRUE )) 
 
 ```
 
-distribution
+Création des nuages de mots
+
+Sport
 ```{r}
-#summary(base_modelisation)
+wordcloud2(data = motsFreqSport[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
+```
+
+Societe
+```{r}
+wordcloud2(data = motsFreqSociete[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
+```
+
+Economie
+```{r}
+wordcloud2(data = motsFreqEconomie[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
+```
+
+Culture
+```{r}
+wordcloud2(data = motsFreqCulture[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
+```
+
+Politique
+```{r}
+wordcloud2(data = motsFreqPolitique[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
+```
+
+Planete
+```{r}
+wordcloud2(data = motsFreqPlanete[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
+```
+
+De nombreux mots semblent spécifiques à une seule catégorie, nous devrions obtenir de bons indicateurs de prédiction.
+
+
+Avant de passer à la partie suivante, supprimons les données que nous n'utiliserons plus
+```{r eval=FALSE, warning=FALSE, include=FALSE}
+rm(motsFreqPlanete)
+rm(motsFreqCulture)
+rm(motsFreqEconomie)
+rm(motsFreqSociete)
+rm(motsFreqSport)
+rm(motsFreqPolitique)
+rm(motPolitique)
+rm(motPlanete)
+rm(motCulture)
+rm(motEconomie)
+rm(motSociete)
+rm(base_modelisation_ACP)
+rm(res.pca)
+rm(base_modele)
+rm(contenu)
+rm(minfreq)
+rm(motSport)
+rm(occurences)
+rm(dtm)
+rm(stopwords_fr)
 ```
 
 
 
-#Modèle Supervisé
+
+# Modèle Supervisé
 Apprentissage supervisé: expliquer/prédire  une sortie Y à partir d’entrées X 
 Nous devons éviter le sur-apprentissage.
 
-Modèle supervisé pouvant être utilisé : CART , randomforest, régression linéaire
+Modèle supervisé pouvant être utilisé : CART , Randomforest, Validation croisée
 
 
 On commence par construire un modèle d'apprentissage, composé de 80% des lignes de base_modelisation.
+Le jeu de test est quand à lui fourni.
 
 ```{r}
 nb_lignes <- sample(1:nrow(base_modelisation), nrow(base_modelisation)*0.80)
+
+training <- base_modelisation[nb_lignes,]
+testing <- base_modelisation[-nb_lignes,]
 ```
 
 
-## Premier modèle
+## Premier modèle : CART
+
 Modélisation : Arbre, algorithme : CART
+Notre premier modèle est un arbre de décision.
 
+Le principe est que, tant qu'on a pas atteind la taille minimal de noeuds enfants on recherche un seuil qui permet de séparer le noeud parents en 2 noeuds enfants en maximisant notre critère de répartition/de fractionnement.
 
-Le principe est que, tant qu'on a pas atteind la taille minimal de noeuds enfants on recherche un seuil qui permet de séparer le noeud parents en 2 noeuds enfants en maximisant le gain d'impureté*
+Notre critère de répartition est le GINI, il est par défaut dans la fonction rpart.
 
-Gain d'impureté : trouver une def + simple 
-
+On prend un cp choisi arbitrairement.
 ```{r}
-tree <-rpart(category~. , data = base_modelisation[nb_lignes,], cp=0, minsplit = 10)
+tree <-rpart(category~. ,
+             data = training,
+             cp=0,
+             minsplit = 10
+            # ,control = rpart.control(minsplit = 10)
+             )
 
 visTree(tree)
 ```
 
-On recherche le cp adapté (à revoir)
-
+On recherche le cp optimal.
 ```{r}
-
-
-
+plotcp(tree)
 ```
-
-Evaluation, matrice de confusion :
+On affine la prédiction en choisissant l'arbre avec l'erreur de prédiction la plus basse
 ```{r}
-p <- predict(tree, newdata=base_modelisation[-nb_lignes,], type= "class")
-length(p)
+Meilleur <- which.min(tree$cptable[,"xerror"])
+cpBest <- tree$cptable[Meilleur, "CP"]
+ArbreChoisi <- prune(tree, cp = cpBest)
+visTree(ArbreChoisi)
 
-conf <- confusionMatrix(data=p, reference = base_modelisation[-nb_lignes,]$category)
-conf
+#Mauvaise méthode puisque le meilleur cp change d'une exécution à l'autre du code
+#Besttree <-rpart(category~. ,
+#                 data = base_modelisation[nb_lignes,],
+#                cp=8e-04,
+#               minsplit = 10
+                   # ,control = rpart.control(minsplit = 10)
+                 
+#              )
 
-```
-AUC
-
-```{r}
-library(ROCR)
-library(pROC)
-
-p1 <- predict(tree, newdata=base_modelisation[-nb_lignes,], type= "prob")
-p1 <- p1[,1]
+#visTree(Besttree)
 
 
-length(base_modelisation[-nb_lignes,]$category)
-
-auc(base_modelisation[-nb_lignes,]$category, p1)
+#print(Besttree$cptable)
 ```
 
 
+```{r}
+#attributes(Besttree)
+#construction plot
+#plot(Besttree)
+#text(Besttree, use.n=T)
+```
 
 
 
-## Deuxième modèle
+
+
+## Deuxième modèle : Random Forest
 Modélisation : Random Forest, algorithme de bagging 
 
 
@@ -335,69 +497,363 @@ Le principe est de créer n arbres non corrélés entre eux puis faire voter cha
 
 Pour faire varier un arbre on sélectionne une partie différente des données à chaque noeud et ne construisant des arbres que sur une partie des individus
 
-Ici :
+Nous commencons avec les paramètres suivants :
 - mtry : 20
-- nbtree: 500
-- 
+- nbtree: 100
+
+Le paramètre mtry représente le nombre de variables échantillonnées de façon aléatoire comme candidats à chaque fractionnement.
+et nbtree est le nombre d'arbres générés.
+
+```{r}
+#proximité entre les lignes calculés
+
+ 
+                          
+modele_rf = randomForest(category~. 
+                         , data=training,
+                         importance = T,
+                         proximity=TRUE,
+                         ntree = 100)
+
+plot(modele_rf)
+
+#print(modele_rf)
+#modele_rf
+#plot(modele_rf)
+
+
+
+```
+
+## Troisième modèle 
+
+## Modélisation :
 
 ```{r}
 
-#modele_rf <- randomForest(x=base_modelisation[nb_lignes,-58], y = base_modelisation[nb_lignes,58], ntree=100)
-#print(modele_rf)
 
 
-modele_rf = randomForest(category~. , data=base_modelisation[nb_lignes,], importance = T, ntree = 100)
-modele_rf
-plot(modele_rf)
+NROW(training)
+# Renvoie 8000 -> racine carré de 8000 = 89.44 -> on créé deux modèles avec un k=89 et un avec k=90 
+
+library(dplyr)
+
+data_class <- base_modelisation
+category_outcome <- data_class %>% select(category)
+category_outcome <- category_outcome %>% mutate_if(is.character, as.factor)
+
+
+category_outcome_train <- category_outcome[nb_lignes, ]
+category_outcome_test <- category_outcome[-nb_lignes, ]
+
+knn_89 <- knn(training[-1], testing[-1], cl=category_outcome_train, k=89)
+knn_90 <- knn(training[-1], testing[-1], cl=category_outcome_train, k=90)
+
+
+ACC_89 <- 100 * sum(category_outcome_test == knn_89)/NROW(category_outcome_test)
+ACC_90 <- 100 * sum(category_outcome_test == knn_90)/NROW(category_outcome_test)
+
+
+confusionMatrix(table(knn_89 ,category_outcome_test))
+confusionMatrix(table(knn_90 ,category_outcome_test))
+```
+
+
+
+## Quatrième truc car on peut pas appeler ca un modèle : Validation croisée
+
+Ce modèle nécessite de réaliser plusieurs modèles d'un des modèles précédent,
+nous choisissons le modèle de random Forest, observons combien faut-il de temps pour calculer 100 arbres à mon ordinateur.
+```{r}
+debut <- Sys.time()
+
+cent = randomForest(category~. 
+                         , data=training,
+                         importance = T,
+                         ntree = 100)
+TempsCent <- Sys.time() - debut
+print(paste("Pour cent arbres, il faut : ", TempsCent))
+
+```
+  1 minute et 45 secondes !
+  
+  En 3h, il y a 180 minutes, je peux donc générer 10 000 arbres en 3h. 
+et en 20 minutes je peux en calculer 1000.
+Commençons par l'option à 1000 arbres.
+
+
+
+Créons plusieurs modèle avec des mtry allant de 1 variables à toutes.
+En tout 50 configurations seront testés.
+```{r}
+mtry_expand = expand.grid( .mtry = seq(from = 1, to = (ncol(training)-1), length.out = 50))
+#length.out : premier multiplieur
+```
+
+
+On créé un grand nombre d'arbres par random forest, avec des configurations différentes du mtry, et grace à la librairie doSNOW on execute
+4 fois le code afin d'obtenir une validation croisée.
+```{r,warning=FALSE}
+
+require(caret)
+require(doSNOW)
+
+  
+#parametre du cv
+cv.cntrl <- trainControl(method = "cv", 
+                           number = 4, 
+                           search = "grid")
+  
+
+
+ #on cree des instances , càd le nbre de fois que l'on execute le programme,
+#mon processeur a 4 coeurs, je mets donc 4,
+# il s'agira donc d'une validation croisée de degré 4.
+# il s'agit de notre deuxième multiplieur
+  cl <- makeCluster(4, 
+                    type = "SOCK") 
+  registerDoSNOW(cl)
+  
+  
+  set.seed(1234)
+ 
+  #méthode CART
+ #   modele3 <- train(x = base_modelisation[nb_lignes,][,names(base_modelisation[nb_lignes,]) != 'category'],
+  #                    y = base_modelisation[nb_lignes,]$category,
+   #                   method = 'rpart', trControl = cv.cntrl, 
+    #                  tuneGrid = mtry_expand, metric = "Accuracy")
+  
+  
+  #méthode random forest 
+    modele3 <- train(x = training[,names(training) != 'category'],
+                      y = training$category, 
+                      method = 'rf', trControl = cv.cntrl, 
+                      tuneGrid = mtry_expand, metric = "Accuracy",
+                      ntree = 5)
+    #ntree est notre dernier multiplieur.
+  
+  # Processing is done, stop the cluster
+  stopCluster(cl)
+#On calcule ainsi length.out x nbre de clust x ntree = nbre d'arbres de notre modèle
+  #                 50       x     4         x 5     = 1000
+
+```
+
+Quel est le meilleur paramètre pour mtry
+```{r}
+modele3_mtry <- modele3$bestTune$mtry
+#modele3_best <- modele3$results %>% filter(mtry==modele3_mtry)
+
+#le meilleur mtry est de :
+modele3_mtry
+```
+
+On affiche le modèle obtenu
+```{r}
+plot(modele3)
+plot(modele3$finalModel$predicted)
+```
+
+Prédiction
+```{r}
+library(ROCR)
+library(pROC)
+
+p3 <- predict(modele3, newdata=testing, type= "prob")
+p3 <- p3[,1]
+
+
+
+```
+Matrice de confusion
+```{r}
+MatriceConfu3 <- confusionMatrix(data = modele3$finalModel$predicted,
+                                reference = training$category)
+
+
+#labels <- c("Precision", "Recall", "F1", "Accuracy", "Kappa")
+#confu3 <- MatriceConfu3$byClass[labels[1:3]]
+#confu3 <- c(confu3, MatriceConfu3$overall[labels[4:5]])
+
+MatriceConfu3
 
 ```
 
 AUC
+```{r,cache=TRUE}
+length(testing$category)
+
+auc(testing$category, p3)
+```
+Un Auc de 0.89 a été trouver avec notre jeu de test, c'est moins bien que notre deuxième modèle.
+Il doit exister un moyen d'optimiser cela.
+
+
 ```{r}
-p1 <- predict(modele_rf, newdata=base_modelisation[-nb_lignes,], type= "prob")
-p1 <- p1[,1]
+#Visualisation de la prédiction
 
-
-length(base_modelisation[-nb_lignes,]$category)
-
-auc(base_modelisation[-nb_lignes,]$category, p1)
-
+plot(p3 ~ category, data=testing, xlab="Observe",
+       ylab="Predis")
 
 ```
 
 
-## Troisième modèle
-```{r}
 
-```
 
 ## Comparaison modèle
+
+## Evaluons nos modèles :
+
+## Evaluation du premier modèle : 
+
+Matrice de confusion :
 ```{r}
+prediction_tree <- predict(ArbreChoisi,
+             newdata=testing,
+           # newdata=test,  
+           #trouver un moyen d'utiliser le jeu de test
+            type= "class"
+           
+           )
+length(prediction_tree)
+
+conf <- confusionMatrix(data=prediction_tree, reference = testing$category)
+conf
 
 ```
+AUC
+```{r,warning=FALSE,cache=TRUE}
+library(ROCR)
+library(pROC)
+
+prediction_tree1 <- predict(ArbreChoisi, newdata=testing, type= "prob")[,1]
+
+
+length(testing$category)
+
+auc(testing$category, prediction_tree1)
+```
+Un Auc de 0.88 a été obtenu avec notre jeu test.
+
+Visualisation de la prédiction
 ```{r}
+plot(prediction_tree1 ~ category, data=testing, xlab="Observe",
+       ylab="Predis")
 
 ```
+
+
+## Evaluation du deuxième modèle : 
+
+Prediction
 ```{r}
+predict_rf <- predict(modele_rf, newdata=testing, type= "prob")[,1]
 
 ```
+
+Test Prediction
+```{r}
+table(predict_rf, testing$category)[1,]
+
+```
+Fréquence conditionel
+```{r}
+table(predict(modele_rf), testing$category)
+
+```
+
+```{r}
+
+#plot(margin(modele_rf, testing$category))
+
+```
+
+AUC
+```{r,cache=TRUE}
+length(testing$category)
+
+auc(testing$category, predict_rf)
+```
+Un AUC de 0.92 a été obtenu avec notre jeu de test.
+
+```{r}
+
+#Visualisation de la prédiction
+
+plot(predict_rf ~ category, data=testing, xlab="Observe",
+       ylab="Predis")
+
+```
+
+
+
 
 ## Mise en œuvre d’un modèle supervisé avec maximum 25 variables
+
+
+On sélectionne les 25 variables les plus importantes parmis le 2ème modèle (random Forest)
+Ainsi qu'une visualisation graphique de leur importance.
 ```{r}
+#class (modele_rf$importance[order(modele_rf$importance[,1], decreasing = TRUE)[1:25], ])
+#"matrix" "array" 
 
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
+modele_rf$importance[order(modele_rf$importance[,1], decreasing = TRUE)[1:25], ]
+varImpPlot(modele_rf)
 ```
 
 
 
+```{r}
+ #copie des termes dans l'attente de trouver une méthode pour récup les variables d'une matrice.                         
+modele_25 = randomForest(category~ selon + film + loi + entrepris + president + ete + ministr + festival + scen + gouvern + contr + franc + match + person + art + general + social + equip + droit + national + etat + final + econom + plac
+                         , data=base_modelisation[nb_lignes,],
+                         importance = T,
+                         proximity=TRUE,
+                         ntree = 100)
+
+plot(modele_25)
+
+
+
+```
+Prediction
+```{r}
+predict_25 <- predict(modele_25, newdata=base_modelisation[-nb_lignes,], type= "prob")[,1]
+
+```
+
+Test Prediction
+```{r}
+table(predict_25, base_modelisation[-nb_lignes,]$category)[1,]
+
+```
+
+Fréquence conditionel
+```{r}
+table(predict(modele_25), base_modelisation[nb_lignes,]$category)
+
+```
+
+AUC
+```{r,cache=TRUE}
+length(base_modelisation[-nb_lignes,]$category)
+
+auc(base_modelisation[-nb_lignes,]$category, predict_25)
+
+
+```
+Une perte d'environ 0.006 d'AUC pour un passage de 440 variables à 25.
+Cette perte est négligable
+
+```{r}
+#Visualisation de la prédiction
+
+plot(predict_25 ~ category, data=base_modelisation[-nb_lignes,], xlab="Observe",
+       ylab="Predis")
+```
+
+
+# Conclusion
+
+Nos 3 modèles sont utilisables.
+La forte réduction du nombre de variable sur le modèle randomForest a eu un impact mineur sur l'AUC.
