@@ -18,3 +18,5 @@ foreach
 iterators
 snow
 doSNOW
+class
+dplyr
