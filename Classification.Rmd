@@ -49,60 +49,37 @@ pre { /* Code block - determines code spacing between lines */
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
-
-
 #install for export in pdf file
 #tinytex::install_tinytex()
-
 if(!require(factoextra)) install.packages("tm", repos = "http://cran.us.r-project.org")
 require(factoextra)
-
-
 if(!require(tm)) install.packages("tm", repos = "http://cran.us.r-project.org")
 require(tm)
-
 if(!require(wordcloud2)) install.packages("wordcloud2", repos = "http://cran.us.r-project.org")
 require(wordcloud2)
-
 if(!require(randomForest)) install.packages("randomForest", repos = "http://cran.us.r-project.org")
 require(randomForest)
-
 if(!require(SnowballC)) install.packages("SnowballC", repos = "http://cran.us.r-project.org")
 require(SnowballC)
-
-
 if(!require(sparkline)) install.packages("sparkline", repos = "http://cran.us.r-project.org")
 require(sparkline)
-
-
 # Construction de l'arbre
 if(!require(rpart)) install.packages("rpart", repos = "http://cran.us.r-project.org")
 require(rpart)
-
 # Visualisation de l'arbre
-
 if(!require(visNetwork)) install.packages("visNetwork", repos = "http://cran.us.r-project.org")
 require(visNetwork)
-
-
 # Test modèle KNN
-
 if(!require(class)) install.packages("tm", repos = "http://cran.us.r-project.org")
 require(class)
-
 # Evaluation des modèles 
-
 if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
 require(caret)
  
 #Import required library
 library(caret)
-
-
 if(!require(ROCR)) install.packages("ROCR", repos = "http://cran.us.r-project.org")
 require(ROCR)
-
 ```
 
 Nous souhaitons classifier un article du monde selon son contenu,
@@ -127,10 +104,8 @@ Le jeu de test est fournis, il a pour élément positif le fait d’être un art
 ```{r}
 data <- 
    read.csv("le_monde.csv", encoding="UTF-8", sep=";", comment.char="#")
-
 test <- 
   read.csv("lignes_jeux_tests.csv")
-
 ```
 
 ## transformation des données
@@ -165,7 +140,6 @@ les lettres avec accents font des trous dans les mots, rendant un grand nombre d
 ```{r, echo=FALSE}
 #Encoding(data$content)
 data$content <- iconv(data$content,from="UTF-8",to="ASCII//TRANSLIT")
-
 ```
 
 On a besoin d'un objet de type corpus, 
@@ -174,7 +148,6 @@ On affiche la première ligne
 ```{r}
 contenu <- Corpus(VectorSource(data$content))
 contenu[1]$content
-
 ```
 
 
@@ -184,14 +157,11 @@ On supprime les caracteres qui ne sont pas des lettres (cette étape posait prob
 contenu <- tm_map(contenu, content_transformer(gsub), pattern = "[^a-zA-Z]", replacement = " ")
                  
 contenu[1]$content
-
-
 ```
 On mets les majuscules en minuscules
 ```{r}
 contenu <- tm_map(contenu, content_transformer(tolower))
 contenu[1]$content
-
 ```
 
 
@@ -200,20 +170,16 @@ On retire les lettres isolés et les mots "vides" tel "quand, comme, hors ..."
 stopwords_fr <- stopwords("french")
 stopwords_fr <- c(stopwords_fr, "a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t",
                    "u","v","w","x","y","z" )
-
 contenu <- tm_map(contenu, removeWords , stopwords_fr)
 contenu[1]$content
-
 ```
 Racinisation (sans retirer le premier espace)
 ```{r}
 contenu <- tm_map(contenu, stemDocument, "french")
 contenu[1]$content
-
 contenu <- tm_map(contenu , stripWhitespace)
 contenu <- tm_map(contenu, content_transformer(gsub), pattern = "^\\s+", replacement = "")
 contenu[1]$content
-
 ```
 
 Vectorisation
@@ -221,15 +187,10 @@ Vectorisation
 Nous ne gardons que les mots avec 1000 occurences minimum
 ```{r, warning=FALSE,echo=FALSE}
 dtm <- DocumentTermMatrix(contenu)
-
 minfreq <- findFreqTerms(dtm , 1000) 
-
 dtm <- DocumentTermMatrix(contenu, control=list(dictionary = minfreq, weighting= weightTf)) 
-
 base_modele <- data.frame(as.matrix(dtm))
-
 #head(base_modele[1,1:5])
-
 ```
 
 
@@ -301,24 +262,16 @@ ainsi en affichant les ellipse nous verrons les catégories qui s'opposent et qu
 ```{r message=FALSE}
 #ces deux lignes sont marginales et ne permettent pas de ce centrer sur les individus.
 base_modelisation_ACP <- base_modelisation[-c(8808,5857), ]
-
-
 library(FactoMineR)
 res.pca = PCA(base_modelisation_ACP, scale.unit=TRUE, ncp=5, quali.sup=1, graph=T)
 plot.PCA(res.pca, axes=c(1, 2), choix="ind", habillage=1,label="var")
-
-
-
 #Essayons de dégager une tendance avec les catégories
-
 #library("factoextra")
-
 #fviz_pca_ind(res.pca, geom.ind = "point", col.ind = base_modelisation_ACP$category, 
  #            palette = c("#00AFBB", "#E7B800", "#FC4E07", "#33FF5E","#CC33FF", "#FFC233"  ),
   #           addEllipses = TRUE, ellipse.type = "confidence",
    #          legend.title = "Catégorie de l'article"
 #)
-
 ```
 Les deux premières dimensions ne rendent compte que de 10% de la variance, les graphiques sont  inexploitables.
 Nous pouvons affirmer que les données sont très dispersés, leur non-corrélation est très forte.
@@ -330,7 +283,6 @@ Une fois la non-corrélation globale de nos variables assurés,
 Examinons graphiquement grâce à la librairie wordcloud les mots les plus fréquents par catégorie par un nuage de mots.
 
 ```{r}
-
 #Preparation des données pour le nuage des catégories
 # on concatene tout le texte , on sélectionne la catégorie sport et spécicifie content_modif pour là où on prend le texte.
 motSport <- paste(data[data$category=="sport",'content_modif'],collapse=' ') 
@@ -339,7 +291,6 @@ motEconomie <- paste(data[data$category=="economie",'content_modif'],collapse=' 
 motCulture <- paste(data[data$category=="culture",'content_modif'],collapse=' ') 
 motPolitique <- paste(data[data$category=="politique",'content_modif'],collapse=' ') 
 motPlanete <- paste(data[data$category=="planete",'content_modif'],collapse=' ') 
-
 # on compte chaque mot, le motif entre guillemet veut dire qu'on coupe la #chainedecaractère quelque soit le nombre d'espaces entre les mots, decreasing en true car il faut montrer les most les plus fréquents , donc on met en décroissant (voir la doc de sort)
 motsFreqSport <- data.frame(sort(table(strsplit(motSport,"\\s+")),decreasing = TRUE )) 
 motsFreqSociete <- data.frame(sort(table(strsplit(motSociete,"\\s+")),decreasing = TRUE )) 
@@ -347,7 +298,6 @@ motsFreqEconomie <- data.frame(sort(table(strsplit(motEconomie,"\\s+")),decreasi
 motsFreqCulture <- data.frame(sort(table(strsplit(motCulture,"\\s+")),decreasing = TRUE )) 
 motsFreqPolitique <- data.frame(sort(table(strsplit(motPolitique,"\\s+")),decreasing = TRUE )) 
 motsFreqPlanete <- data.frame(sort(table(strsplit(motPlanete,"\\s+")),decreasing = TRUE )) 
-
 ```
 
 Création des nuages de mots
@@ -424,7 +374,6 @@ Le jeu de test est quand à lui fourni.
 
 ```{r}
 nb_lignes <- sample(1:nrow(base_modelisation), nrow(base_modelisation)*0.80)
-
 training <- base_modelisation[nb_lignes,]
 testing <- base_modelisation[-nb_lignes,]
 ```
@@ -447,7 +396,6 @@ tree <-rpart(category~. ,
              minsplit = 10
             # ,control = rpart.control(minsplit = 10)
              )
-
 visTree(tree)
 ```
 
@@ -461,7 +409,6 @@ Meilleur <- which.min(tree$cptable[,"xerror"])
 cpBest <- tree$cptable[Meilleur, "CP"]
 ArbreChoisi <- prune(tree, cp = cpBest)
 visTree(ArbreChoisi)
-
 #Mauvaise méthode puisque le meilleur cp change d'une exécution à l'autre du code
 #Besttree <-rpart(category~. ,
 #                 data = base_modelisation[nb_lignes,],
@@ -470,10 +417,7 @@ visTree(ArbreChoisi)
                    # ,control = rpart.control(minsplit = 10)
                  
 #              )
-
 #visTree(Besttree)
-
-
 #print(Besttree$cptable)
 ```
 
@@ -506,7 +450,6 @@ et nbtree est le nombre d'arbres générés.
 
 ```{r}
 #proximité entre les lignes calculés
-
  
                           
 modele_rf = randomForest(category~. 
@@ -514,15 +457,10 @@ modele_rf = randomForest(category~.
                          importance = T,
                          proximity=TRUE,
                          ntree = 100)
-
 plot(modele_rf)
-
 #print(modele_rf)
 #modele_rf
 #plot(modele_rf)
-
-
-
 ```
 
 ## Troisième modèle 
@@ -530,30 +468,18 @@ plot(modele_rf)
 ## Modélisation :
 
 ```{r}
-
-
-
 NROW(training)
 # Renvoie 8000 -> racine carré de 8000 = 89.44 -> on créé deux modèles avec un k=89 et un avec k=90 
-
 library(dplyr)
-
 data_class <- base_modelisation
 category_outcome <- data_class %>% select(category)
 category_outcome <- category_outcome %>% mutate_if(is.character, as.factor)
-
-
 category_outcome_train <- category_outcome[nb_lignes, ]
 category_outcome_test <- category_outcome[-nb_lignes, ]
-
 knn_89 <- knn(training[-1], testing[-1], cl=category_outcome_train, k=89)
 knn_90 <- knn(training[-1], testing[-1], cl=category_outcome_train, k=90)
-
-
 ACC_89 <- 100 * sum(category_outcome_test == knn_89)/NROW(category_outcome_test)
 ACC_90 <- 100 * sum(category_outcome_test == knn_90)/NROW(category_outcome_test)
-
-
 confusionMatrix(table(knn_89 ,category_outcome_test))
 confusionMatrix(table(knn_90 ,category_outcome_test))
 ```
@@ -566,14 +492,12 @@ Ce modèle nécessite de réaliser plusieurs modèles d'un des modèles précéd
 nous choisissons le modèle de random Forest, observons combien faut-il de temps pour calculer 100 arbres à mon ordinateur.
 ```{r}
 debut <- Sys.time()
-
 cent = randomForest(category~. 
                          , data=training,
                          importance = T,
                          ntree = 100)
 TempsCent <- Sys.time() - debut
 print(paste("Pour cent arbres, il faut : ", TempsCent))
-
 ```
   1 minute et 45 secondes !
   
@@ -594,18 +518,14 @@ mtry_expand = expand.grid( .mtry = seq(from = 1, to = (ncol(training)-1), length
 On créé un grand nombre d'arbres par random forest, avec des configurations différentes du mtry, et grace à la librairie doSNOW on execute
 4 fois le code afin d'obtenir une validation croisée.
 ```{r,warning=FALSE}
-
 require(caret)
 require(doSNOW)
-
   
 #parametre du cv
 cv.cntrl <- trainControl(method = "cv", 
                            number = 4, 
                            search = "grid")
   
-
-
  #on cree des instances , càd le nbre de fois que l'on execute le programme,
 #mon processeur a 4 coeurs, je mets donc 4,
 # il s'agira donc d'une validation croisée de degré 4.
@@ -636,14 +556,12 @@ cv.cntrl <- trainControl(method = "cv",
   stopCluster(cl)
 #On calcule ainsi length.out x nbre de clust x ntree = nbre d'arbres de notre modèle
   #                 50       x     4         x 5     = 1000
-
 ```
 
 Quel est le meilleur paramètre pour mtry
 ```{r}
 modele3_mtry <- modele3$bestTune$mtry
 #modele3_best <- modele3$results %>% filter(mtry==modele3_mtry)
-
 #le meilleur mtry est de :
 modele3_mtry
 ```
@@ -658,31 +576,22 @@ Prédiction
 ```{r}
 library(ROCR)
 library(pROC)
-
 p3 <- predict(modele3, newdata=testing, type= "prob")
 p3 <- p3[,1]
-
-
-
 ```
 Matrice de confusion
 ```{r}
 MatriceConfu3 <- confusionMatrix(data = modele3$finalModel$predicted,
                                 reference = training$category)
-
-
 #labels <- c("Precision", "Recall", "F1", "Accuracy", "Kappa")
 #confu3 <- MatriceConfu3$byClass[labels[1:3]]
 #confu3 <- c(confu3, MatriceConfu3$overall[labels[4:5]])
-
 MatriceConfu3
-
 ```
 
 AUC
 ```{r,cache=TRUE}
 length(testing$category)
-
 auc(testing$category, p3)
 ```
 Un Auc de 0.89 a été trouver avec notre jeu de test, c'est moins bien que notre deuxième modèle.
@@ -691,10 +600,8 @@ Il doit exister un moyen d'optimiser cela.
 
 ```{r}
 #Visualisation de la prédiction
-
 plot(p3 ~ category, data=testing, xlab="Observe",
        ylab="Predis")
-
 ```
 
 
@@ -716,21 +623,15 @@ prediction_tree <- predict(ArbreChoisi,
            
            )
 length(prediction_tree)
-
 conf <- confusionMatrix(data=prediction_tree, reference = testing$category)
 conf
-
 ```
 AUC
 ```{r,warning=FALSE,cache=TRUE}
 library(ROCR)
 library(pROC)
-
 prediction_tree1 <- predict(ArbreChoisi, newdata=testing, type= "prob")[,1]
-
-
 length(testing$category)
-
 auc(testing$category, prediction_tree1)
 ```
 Un Auc de 0.88 a été obtenu avec notre jeu test.
@@ -739,7 +640,6 @@ Visualisation de la prédiction
 ```{r}
 plot(prediction_tree1 ~ category, data=testing, xlab="Observe",
        ylab="Predis")
-
 ```
 
 
@@ -748,41 +648,32 @@ plot(prediction_tree1 ~ category, data=testing, xlab="Observe",
 Prediction
 ```{r}
 predict_rf <- predict(modele_rf, newdata=testing, type= "prob")[,1]
-
 ```
 
 Test Prediction
 ```{r}
 table(predict_rf, testing$category)[1,]
-
 ```
 Fréquence conditionel
 ```{r}
 table(predict(modele_rf), testing$category)
-
 ```
 
 ```{r}
-
 #plot(margin(modele_rf, testing$category))
-
 ```
 
 AUC
 ```{r,cache=TRUE}
 length(testing$category)
-
 auc(testing$category, predict_rf)
 ```
 Un AUC de 0.92 a été obtenu avec notre jeu de test.
 
 ```{r}
-
 #Visualisation de la prédiction
-
 plot(predict_rf ~ category, data=testing, xlab="Observe",
        ylab="Predis")
-
 ```
 
 
@@ -796,7 +687,6 @@ Ainsi qu'une visualisation graphique de leur importance.
 ```{r}
 #class (modele_rf$importance[order(modele_rf$importance[,1], decreasing = TRUE)[1:25], ])
 #"matrix" "array" 
-
 modele_rf$importance[order(modele_rf$importance[,1], decreasing = TRUE)[1:25], ]
 varImpPlot(modele_rf)
 ```
@@ -810,44 +700,33 @@ modele_25 = randomForest(category~ selon + film + loi + entrepris + president + 
                          importance = T,
                          proximity=TRUE,
                          ntree = 100)
-
 plot(modele_25)
-
-
-
 ```
 Prediction
 ```{r}
 predict_25 <- predict(modele_25, newdata=base_modelisation[-nb_lignes,], type= "prob")[,1]
-
 ```
 
 Test Prediction
 ```{r}
 table(predict_25, base_modelisation[-nb_lignes,]$category)[1,]
-
 ```
 
 Fréquence conditionel
 ```{r}
 table(predict(modele_25), base_modelisation[nb_lignes,]$category)
-
 ```
 
 AUC
 ```{r,cache=TRUE}
 length(base_modelisation[-nb_lignes,]$category)
-
 auc(base_modelisation[-nb_lignes,]$category, predict_25)
-
-
 ```
 Une perte d'environ 0.006 d'AUC pour un passage de 440 variables à 25.
 Cette perte est négligable
 
 ```{r}
 #Visualisation de la prédiction
-
 plot(predict_25 ~ category, data=base_modelisation[-nb_lignes,], xlab="Observe",
        ylab="Predis")
 ```
