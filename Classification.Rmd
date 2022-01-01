@@ -99,7 +99,7 @@ Nous finirons par l'évaluation des résultats de la prédiction des classificat
 Ensemble variables explicatives Xi : nbre d'occurences des mots dans l'article.
 Variable à expliquer : la catégorie de l'article.
 Fonction de perte/évaluation : Matrice de confusion/AUC
-Algorithmes : CART, RandomForest, 3ème.
+Algorithmes : CART, RandomForest, SVM
 Méthode pour éviter le sur-apprentissage : Validation croisée.
 
 
@@ -250,7 +250,7 @@ Variables à expliquer : culture, economie, planete, politique, societe, sport.
 
 A noter que nous n'effectuons que les dernières partie d'un projet de Data Science,
 puisque les données nous ont été fournis.
-Avec ni gestion des manquants, ni gestion des fautes d'orthographes à réaliser.
+Avec ni gestion des manquants, ni gestion des fautes d'orthographes à réaliser (puisqu'il s'agit d'articles de presse).
 
 Avant de réaliser des modèles de prédictions, détaillons le jeu de données transformé obtenu.
 Notre plus grande menace serait une corrélation globale de nos variables.
@@ -405,7 +405,7 @@ testing <- base_modelisation[-nb_lignes,]
 
 
 
-## Construction de l'arbre
+## Création du modèle CART
 Notre premier modèle est un arbre de décision.
 
 Le principe est que, tant qu'on a pas atteind la taille minimal de noeuds enfants on recherche un seuil qui permet de séparer le noeud parents en 2 noeuds enfants en maximisant notre critère de répartition/de fractionnement.
@@ -422,12 +422,13 @@ modele_CART <-rpart(category~. ,
              )
 visTree(modele_CART)
 ```
-## Choix meilleur CP
+## Hyperparamètre selection
 
 On recherche le cp optimal.
 ```{r}
 plotcp(modele_CART)
 ```
+
 On affine la prédiction en choisissant l'arbre avec l'erreur de prédiction la plus basse
 ```{r}
 Meilleur <- which.min(modele_CART$cptable[,"xerror"])
@@ -457,7 +458,7 @@ visTree(Modele_Cart_Arbre)
 ```
 
 
-## Validation croisée CART
+## Validation croisée
 Ce modèle est très sensible à l'échantillonage, d'où la grande importance de la validation croisée pour lui.
 
 Observons combien faut-il de temps pour calculer 100 arbres à mon ordinateur.
@@ -479,7 +480,7 @@ print(paste("Pour générer un arbre, il faut : ", TempsArbre))
 
 Créons plusieurs modèle avec des cp différents
 ```{r}
-cp_expand = expand.grid( .cp = seq(from = 0, to = 0.01, by = 0.00005)) 
+cp_expand = expand.grid( .cp = seq(from = 0, to = 0.01, by = 0.00001)) 
 ```
 
 
@@ -514,7 +515,7 @@ cv.cntrl <- trainControl(method = "cv",
 
   stopCluster(cl)
 #On calcule ainsi cp expand x nbre de clust  = nbre d'arbres 
-  #                   200   x     4          = 800
+  #                   1000  x     4          = 4000
 ```
 
 
@@ -523,8 +524,6 @@ On affiche le modèle obtenu
 ```{r}
 plot(modele_CART_CV)
 ```
-
-
 
 
 On choisit à nouveau le cp
@@ -549,7 +548,7 @@ sort(modele_CART_CV$finalModel$variable.importance, decreasing = TRUE)[1:25]
 
 # Deuxième modèle : Random Forest
 
-## Création du modèle
+## Création du modèle RF
 
 Modélisation : Random Forest, algorithme de bagging 
 
@@ -636,13 +635,15 @@ cv.cntrl <- trainControl(method = "cv",
                       y = base_modelisation[nb_lignes,]$category, 
                       method = 'rf', trControl = cv.cntrl, 
                       tuneGrid = mtry_expand, metric = "Accuracy",
-                      ntree = 5)
+                      ntree = 100)
     #ntree est notre dernier multiplieur.
   
   # Processing is done, stop the cluster
   stopCluster(cl)
 #On calcule ainsi length.out x nbre de clust x ntree = nbre d'arbres de notre modèle
-  #                 50       x     4         x 5     = 1000
+  #                 50       x     4         x 100   = 20000
+  
+  #sachant que l'on utilise 4 coeurs logiques, cela prendra 1h30 à générer ce modèle.
 ```
 
 Quel est le meilleur paramètre pour mtry
@@ -659,84 +660,195 @@ plot(modele_rf_cv)
 #plot(modele_rf_cv$finalModel$predicted)
 ```
 
-# Troisième modèle : 
+# Troisième modèle 
 
-
-
-
-
-
-## Modélisation :
+## test K-nn
 
 ```{r}
-NROW(training)
+#NROW(training)
 # Renvoie 8000 -> racine carré de 8000 = 89.44 -> on créé deux modèles avec un k=89 et un avec k=90 
-library(dplyr)
-data_class <- base_modelisation
-category_outcome <- data_class %>% select(category)
-category_outcome <- category_outcome %>% mutate_if(is.character, as.factor)
-category_outcome_train <- category_outcome[nb_lignes, ]
-category_outcome_test <- category_outcome[-nb_lignes, ]
-knn_89 <- knn(training[-1], testing[-1], cl=category_outcome_train, k=89)
-knn_90 <- knn(training[-1], testing[-1], cl=category_outcome_train, k=90)
-ACC_89 <- 100 * sum(category_outcome_test == knn_89)/NROW(category_outcome_test)
-ACC_90 <- 100 * sum(category_outcome_test == knn_90)/NROW(category_outcome_test)
-confusionMatrix(table(knn_89 ,category_outcome_test))
-confusionMatrix(table(knn_90 ,category_outcome_test))
+#library(dplyr)
+#data_class <- base_modelisation
+#category_outcome <- data_class %>% select(category)
+#category_outcome <- category_outcome %>% mutate_if(is.character, as.factor)
+#category_outcome_train <- category_outcome[nb_lignes, ]
+#category_outcome_test <- category_outcome[-nb_lignes, ]
+#knn_89 <- knn(training[-1], testing[-1], cl=category_outcome_train, k=89)
+#knn_90 <- knn(training[-1], testing[-1], cl=category_outcome_train, k=90)
+#ACC_89 <- 100 * sum(category_outcome_test == knn_89)/NROW(category_outcome_test)
+#ACC_90 <- 100 * sum(category_outcome_test == knn_90)/NROW(category_outcome_test)
+#confusionMatrix(table(knn_89 ,category_outcome_test))
+#confusionMatrix(table(knn_90 ,category_outcome_test))
 ```
 
+
+## Création modèle SVM
+
+Création d'un jeu de donnée normaliser afin d'obtenir de meilleurs résultats.
+```{r}
+training_Scale <- training
+testing_Scale <- testing
+training_Scale[-1] <- scale(training_Scale[-1])
+testing_Scale[-1] <- scale(testing_Scale[-1])
+```
+
+Création du modèle SVM grâce à la librairie e1071
+```{r}
+#install.packages('e1071')
+library(e1071)
+ 
+modele_SVM = svm(formula = category~.,
+                 data = training_Scale,
+                 type = 'C-classification',
+                 kernel = 'linear')
+```
+
+## Hyperparamètre 
+On optimise les paramètres (model selection) 
+```{r}
+#on recherche dans une grille 
+Tune_SVM <- tune(svm, category~.,  data = training_Scale,
+ranges = list(epsilon = seq(0,1,0.2), cost = 2^(2:9))
+)
+
+# affichage de la recherche.
+print(Tune_SVM)
+plot(Tune_SVM)
+
+```
+
+D'après l'indicateur RMSE (un évaluateur du modèle SVM), nous réalisons une nouvelle recherche dans un interval plus précis.
+```{r}
+Tune_SVM <- tune(svm, Y ~ X,  data = data,
+ranges = list(epsilon = seq(0,0.2,0.01), cost = 2^(2:9))
+)
+ 
+print(Tune_SVM)
+plot(Tune_SVM)
+```
+
+On sélectionne le meilleur modèle.
+```{r}
+SVM_Opti <- Tune_SVM$best.model
+```
+
+## Validation croisée
 
 ```{r}
+require(caret)
+require(doSNOW)
+  
+#parametre du cv
+cv.cntrl <- trainControl(method = "cv", 
+                           number = 4, 
+                           search = "grid")
+  
+ #on cree des instances , càd le nbre de fois que l'on execute le programme,
+#mon processeur a 4 coeurs, je mets donc 4,
+# il s'agira donc d'une validation croisée de degré 4.
+  cl <- makeCluster(4, 
+                    type = "SOCK") 
+  registerDoSNOW(cl)
+  
+  
+  set.seed(1234)
+ 
+  
+  #méthode SVM avec fonction kernel radial (et non linéaire comme la première)
+  modele_SVM_CV <- train(
+  category~ .,
+  data = training_Scale,
+  method = 'svmRadial',
+  preProcess = c("center", "scale"),
+  trCtrl = cv.cntrl
+)
+    
+  
+ 
+  stopCluster(cl)
+
 
 
 ```
-
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-
-```{r}
-
-```
-
-
 
 # Comparaison modèle
-
-
 
 ## Evaluation du premier modèle 
 
 ### CART 0.88
 
-Matrice de confusion 
+Prédictions
 ```{r}
+
+#jeu d'entrainement
+p_CART_train <- predict(ArbreChoisi,
+             newdata=training,
+           # newdata=test,  
+           #trouver un moyen d'utiliser le jeu de test
+           # type= "class"
+             type= "class"
+           )
+
+#jeu de test
 p_CART <- predict(ArbreChoisi,
              newdata=testing,
            # newdata=test,  
            #trouver un moyen d'utiliser le jeu de test
-            type= "class"
+           # type= "class"
+           type= "class"
            
            )
-length(p_CART)
+
+
+```
+
+Matrices de confusion 
+```{r}
+
+#length(p_CART)
+
+#jeu entrainement
+conf_CART <- confusionMatrix(data=p_CART_train, reference = training$category)
+conf_CART
+
+#jeu de test
 conf_CART <- confusionMatrix(data=p_CART, reference = testing$category)
 conf_CART
+
 ```
+
+
+
 AUC
 ```{r,warning=FALSE,cache=TRUE}
 library(ROCR)
 library(pROC)
 
-prediction_tree1 <- predict(ArbreChoisi, newdata=testing, type= "prob")[,1]
-length(testing$category)
 
-auc(testing$category, prediction_tree1 )
+#jeu d'entrainement
+p_CART_train <- predict(ArbreChoisi,
+             newdata=training,
+           # newdata=test,  
+           #trouver un moyen d'utiliser le jeu de test
+           # type= "class"
+             type= "prob"
+           )[,1]
+
+#jeu de test
+p_CART <- predict(ArbreChoisi,
+             newdata=testing,
+           # newdata=test,  
+           #trouver un moyen d'utiliser le jeu de test
+           # type= "class"
+           type= "prob"
+           
+           )[,1]
+
+#AUC jeu d'entrainement
+auc(training$category, pCART_CV_train )
+
+#AUC jeu de test
+auc(testing$category, pCART_CV )
 ```
 Un Auc de 0.88 a été obtenu avec notre jeu test.
 
@@ -750,12 +862,17 @@ plot(prediction_tree1 ~ category, data=testing, xlab="Observe",
 
 Prédiction
 ```{r,warning=FALSE}
-library(ROCR)
-library(pROC)
+#jeu d'entrainement
+pCART_CV_train <- predict(modele_CART_CV, newdata=training, type= "prob")
+pCART_CV_train <- pCART_CV_train[,1]
+
+#jeu de test
 pCART_CV <- predict(modele_CART_CV, newdata=testing, type= "prob")
 pCART_CV <- pCART_CV[,1]
+
 ```
-Matrice de confusion
+
+Matrice de confusion jeu d'entrainement
 ```{r}
 MatriceConfu_CART_CV <- confusionMatrix(data = modele_CART_CV,
                                 reference = training$category)
@@ -765,12 +882,30 @@ MatriceConfu_CART_CV <- confusionMatrix(data = modele_CART_CV,
 MatriceConfu_CART_CV
 ```
 
+
+Matrice de confusion Jeu de test
+```{r}
+MatriceConfu_CART_CV <- confusionMatrix(data = modele_CART_CV,
+                                reference = testing$category)
+#labels <- c("Precision", "Recall", "F1", "Accuracy", "Kappa")
+#confu3 <- MatriceConfu_CART_CV$byClass[labels[1:3]]
+#confu3 <- c(confu3, MatriceConfu_CART_CV$overall[labels[4:5]])
+MatriceConfu_CART_CV
+```
+
 AUC
 ```{r,cache=TRUE}
 length(testing$category)
+#Auc Jeu d'entrainement
+auc(training$category, pCART_CV_train)
+
+#AUC du jeu de test
 auc(testing$category, pCART_CV)
+
+
 ```
 Un Auc de 0.89 a été trouver avec notre jeu de test.
+
 
 ```{r}
 #Visualisation de la prédiction
@@ -784,10 +919,31 @@ plot(pCART_CV ~ category, data=testing, xlab="Observe",
 
 ### Random Forest 0.92
 
-Prediction
+Predictions
 ```{r}
+#jeu d'entrainement
+predict_rf_train <- predict(modele_rf, newdata=training, type= "prob")[,1]
+
+#jeu de test
 predict_rf <- predict(modele_rf, newdata=testing, type= "prob")[,1]
 ```
+
+
+AUC
+```{r,cache=TRUE,warning=FALSE}
+#length(testing$category)
+
+#jeu d'entrainement
+auc(training$category, predict_rf_train)
+
+#jeu de test
+auc(testing$category, predict_rf)
+```
+Un AUC de 0.92 a été obtenu avec notre jeu de test.
+
+
+
+Observons les résultats d'un AUC de grande qualité : 
 
 Test Prediction
 ```{r}
@@ -802,53 +958,64 @@ table(predict_rf, testing$category)[1:7,]
 plot(margin(modele_rf, testing$category))
 ```
 
-AUC
-```{r,cache=TRUE,warning=FALSE}
-length(testing$category)
-auc(testing$category, predict_rf)
-```
-Un AUC de 0.92 a été obtenu avec notre jeu de test.
 
 ```{r}
 #Visualisation de la prédiction
 plot(predict_rf ~ category, data=testing, xlab="Observe",
        ylab="Predis")
 ```
+
+
 ### Random Forest Cross Validation 0.87
 
 
 Prédiction
 ```{r}
-library(ROCR)
-library(pROC)
-pRF_CV <- predict(modele_rf_cv, newdata=base_modelisation[-nb_lignes,], type= "prob")
+#jeu d'entrainement
+pRF_CV_train <- predict(modele_rf_cv, newdata=training, type= "prob")
+pRF_CV_train <- pRF_CV_train[,1]
+
+
+#jeu de test
+pRF_CV <- predict(modele_rf_cv, newdata=testing, type= "prob")
 pRF_CV <- pRF_CV[,1]
+
+
 ```
 Matrice de confusion
 ```{r}
+#jeu d'entrainement
 MatriceConfu3 <- confusionMatrix(data = modele_rf_cv,
-                                reference = base_modelisation[nb_lignes,]$category)
+                                reference = training$category)
+MatriceConfu3
 
+#jeu de test
+MatriceConfu3 <- confusionMatrix(data = modele_rf_cv,
+                                reference = testing$category)
+MatriceConfu3
 #data = modele_rf_cv$finalModel$predicted
 
 #labels <- c("Precision", "Recall", "F1", "Accuracy", "Kappa")
 #confu3 <- MatriceConfu3$byClass[labels[1:3]]
 #confu3 <- c(confu3, MatriceConfu3$overall[labels[4:5]])
-MatriceConfu3
+
 ```
 
 AUC
 ```{r,cache=TRUE}
-length(base_modelisation[-nb_lignes,]$category)
-auc(base_modelisation[-nb_lignes,]$category, pRF_CV)
+#length(base_modelisation[-nb_lignes,]$category)
+
+#jeu d'entrainement
+auc(training$category, pRF_CV_train)
+#jeu de test
+auc(testing$category, pRF_CV)
 ```
-Un Auc de 0.88 a été trouver avec notre jeu de test, c'est moins bien que notre deuxième modèle.
-Il doit exister un moyen d'optimiser cela.
+Un Auc de 0.88 a été trouver avec notre jeu de test, et un AUC de 0.96 avec notre jeu d'entrainement.
 
 
 ```{r}
 #Visualisation de la prédiction
-plot(pRF_CV ~ category, data=base_modelisation[-nb_lignes,], xlab="Observe",
+plot(pRF_CV ~ category, data=testing, xlab="Observe",
        ylab="Predis")
 ```
 
@@ -856,10 +1023,104 @@ plot(pRF_CV ~ category, data=base_modelisation[-nb_lignes,], xlab="Observe",
 
 ## Troisième modèle
 
-### k-NN
+### SVM 
 
-### k-NN Cross Validation.
+Predictions
+```{r}
+#jeu d'entrainement
+SVM_pred_training = predict(SVM_Opti, newdata = training_Scale)
+#jeu de test
+SVM_pred = predict(SVM_Opti, newdata = testing_Scale)
+```
 
+Matrices de confusion
+```{r}
+#Tableau_Pred_SVM = table(testing_Scale[,1], SVM_pred)
+#Tableau_Pred_SVM
+
+#jeu d'entrainement
+MatriceConfu_SVM <- confusionMatrix(data = SVM_pred_training,
+                                reference = training_Scale[,1])
+MatriceConfu_SVM
+
+#jeu de test
+MatriceConfu_SVM <- confusionMatrix(data = SVM_pred,
+                                reference = testing_Scale[,1])
+MatriceConfu_SVM
+
+
+```
+
+AUC
+```{r,warning=FALSE}
+library(ROCR)
+library(pROC)
+
+#auc(testing_Scale[,1], SVM_pred )
+#plot(AUC_SVM, add = TRUE,col = "red", print.auc=TRUE, print.auc.x = 0.5, print.auc.y = 0.3)
+#legend(0.3, 0.2, legend = c("auc svm"), lty = c(1), col = c("blue"))
+
+#jeu d'entrainement
+AUC_SVM_train <- roc(response =training_Scale$category, predictor =as.numeric(SVM_pred_training))
+AUC_SVM_train
+
+#jeu de test
+AUC_SVM <- roc(response =testing_Scale$category, predictor =as.numeric(SVM_pred))
+AUC_SVM
+
+
+
+```
+AUC de 0.83 pour un SVM avec une fonction kernel en linéaire sur notre jeu de test, un AUC de 0.95 sur notre jeu d'entrainement.
+
+
+### SVM Validation croisée
+
+Prediction
+```{r}
+SVM_pred_CV_train = predict(modele_SVM_CV, newdata = training_Scale)
+
+SVM_pred_CV = predict(modele_SVM_CV, newdata = testing_Scale)
+```
+
+Matrice de confusion
+```{r}
+#Tableau_Pred_SVM = table(testing_Scale[,1], SVM_pred)
+#Tableau_Pred_SVM
+
+#jeu d'entrainement
+MatriceConfu_SVM <- confusionMatrix(data = SVM_pred_CV_train,
+                                reference = training_Scale[,1])
+MatriceConfu_SVM
+
+#jeu de test
+MatriceConfu_SVM <- confusionMatrix(data = SVM_pred_CV,
+                                reference = testing_Scale[,1])
+MatriceConfu_SVM
+
+
+```
+
+AUC
+```{r,warning=FALSE}
+library(ROCR)
+library(pROC)
+
+
+#auc(testing_Scale[,1], SVM_pred )
+
+#jeu d'entrainement
+AUC_SVM <- roc(response =training_Scale$category, predictor =as.numeric(SVM_pred_CV_train))
+AUC_SVM
+#jeu de test
+AUC_SVM <- roc(response =testing_Scale$category, predictor =as.numeric(SVM_pred_CV))
+AUC_SVM
+
+#plot(AUC_SVM, add = TRUE,col = "red", print.auc=TRUE, print.auc.x = 0.5, print.auc.y = 0.3)
+#legend(0.3, 0.2, legend = c("auc svm"), lty = c(1), col = c("blue"))
+
+
+```
 
 
 ## Mise en œuvre d’un modèle supervisé avec maximum 25 variables 0.87
@@ -888,26 +1149,42 @@ plot(modele_25)
 ```
 Prediction
 ```{r}
-predict_25 <- predict(modele_25, newdata=base_modelisation[-nb_lignes,], type= "prob")[,1]
+#jeu d'entrainement
+predict_25_train <- predict(modele_25, newdata=training, type= "prob")[,1]
+#jeu de test
+predict_25 <- predict(modele_25, newdata=testing, type= "prob")[,1]
 ```
 
-Test Prediction
-```{r}
-table(predict_25, base_modelisation[-nb_lignes,]$category)[1,]
-```
-
-Fréquence conditionel
-```{r}
-table(predict(modele_25), base_modelisation[nb_lignes,]$category)
-```
 
 AUC
 ```{r,cache=TRUE}
-length(base_modelisation[-nb_lignes,]$category)
-auc(base_modelisation[-nb_lignes,]$category, predict_25)
+library(ROCR)
+library(pROC)
+#length(base_modelisation[-nb_lignes,]$category)
+
+#jeu d'entrainement
+auc(training$category, predict_25_train)
+#jeu de test
+auc(testing$category, predict_25)
 ```
+AUC jeu d'entrainement : 0.93
+AUC jeu de test : 0.87
+
+
 Une perte d'environ 0.006 d'AUC pour un passage de 440 variables à 25.
 Cette perte est négligable
+
+
+Test Prediction
+```{r}
+table(predict_25, testing$category)[1,]
+```
+
+Fréquence conditionel (prédiction avec jeu d'entrainement)
+```{r}
+table(predict(modele_25), training$category)
+```
+
 
 ```{r}
 #Visualisation de la prédiction
