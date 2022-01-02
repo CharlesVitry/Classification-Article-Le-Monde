@@ -2,13 +2,12 @@
 
 [Rapport](https://okacola.github.io/Classification-Article-Le-Monde/Classification.html)
 
-**Algorithmes utilisés : Cart, Random Forest, k-fold Cross-Validation.**
+**Algorithmes utilisés : Cart, Random Forest, SVM avec Validation croisée**
 
+Fonction de perte/évaluation : Matrice de confusion/AUC
 
 
 ### TO DO
-* Choix meilleur paramètre pour 3ème modèle
-* Calculs 3ème modèle
-* Meilleur ajout des 25 variables
-* Comparaison rédaction
+* Hyperparamètres des validations croisées
 * Conclusion rédaction
+* Mise en forme Html
