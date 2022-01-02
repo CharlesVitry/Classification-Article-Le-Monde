@@ -388,7 +388,7 @@ rm(stopwords_fr)
 Apprentissage supervisé: expliquer/prédire  une sortie Y à partir d’entrées X 
 Nous devons éviter le sur-apprentissage, pour cela nous utiliserons la cross validation.
 
-[](CrossValidation.png)
+![CrossValidation.png](CrossValidation.png)
 
 
 Modèle supervisé utilisés : CART , Randomforest, k-NN
@@ -717,15 +717,7 @@ plot(Tune_SVM)
 
 ```
 
-D'après l'indicateur RMSE (un évaluateur du modèle SVM), nous réalisons une nouvelle recherche dans un interval plus précis.
-```{r}
-Tune_SVM <- tune(svm, Y ~ X,  data = data,
-ranges = list(epsilon = seq(0,0.2,0.01), cost = 2^(2:9))
-)
- 
-print(Tune_SVM)
-plot(Tune_SVM)
-```
+
 
 On sélectionne le meilleur modèle.
 ```{r}
@@ -775,13 +767,13 @@ cv.cntrl <- trainControl(method = "cv",
 
 ## Evaluation du premier modèle 
 
-### CART 0.88
+### CART [0.86]
 
 Prédictions
 ```{r}
 
 #jeu d'entrainement
-p_CART_train <- predict(ArbreChoisi,
+p_CART_train <- predict(Modele_Cart_Arbre,
              newdata=training,
            # newdata=test,  
            #trouver un moyen d'utiliser le jeu de test
@@ -790,7 +782,7 @@ p_CART_train <- predict(ArbreChoisi,
            )
 
 #jeu de test
-p_CART <- predict(ArbreChoisi,
+p_CART <- predict(Modele_Cart_Arbre,
              newdata=testing,
            # newdata=test,  
            #trouver un moyen d'utiliser le jeu de test
@@ -826,7 +818,7 @@ library(pROC)
 
 
 #jeu d'entrainement
-p_CART_train <- predict(ArbreChoisi,
+p_CART_train <- predict(Modele_Cart_Arbre,
              newdata=training,
            # newdata=test,  
            #trouver un moyen d'utiliser le jeu de test
@@ -835,7 +827,7 @@ p_CART_train <- predict(ArbreChoisi,
            )[,1]
 
 #jeu de test
-p_CART <- predict(ArbreChoisi,
+p_CART <- predict(Modele_Cart_Arbre,
              newdata=testing,
            # newdata=test,  
            #trouver un moyen d'utiliser le jeu de test
@@ -845,13 +837,13 @@ p_CART <- predict(ArbreChoisi,
            )[,1]
 
 #AUC jeu d'entrainement
-auc(training$category, pCART_CV_train )
+auc(training$category, p_CART_train )
 
 #AUC jeu de test
-auc(testing$category, pCART_CV )
+auc(testing$category, p_CART )
 ```
-Un Auc de 0.88 a été obtenu avec notre jeu test.
-
+Un Auc de 0.86 a été obtenu avec notre jeu test.
+Et 0.90 avec le jeu d'entrainement.
 Visualisation de la prédiction
 ```{r}
 plot(prediction_tree1 ~ category, data=testing, xlab="Observe",
@@ -904,7 +896,8 @@ auc(testing$category, pCART_CV)
 
 
 ```
-Un Auc de 0.89 a été trouver avec notre jeu de test.
+Un Auc de 0.85 a été trouver avec notre jeu de test.
+Et 0.89 avec le jeu d'entrainement.
 
 
 ```{r}
@@ -917,7 +910,7 @@ plot(pCART_CV ~ category, data=testing, xlab="Observe",
 
 ## Evaluation du deuxième modèle : 
 
-### Random Forest 0.92
+### Random Forest [0.92]
 
 Predictions
 ```{r}
@@ -940,6 +933,7 @@ auc(training$category, predict_rf_train)
 auc(testing$category, predict_rf)
 ```
 Un AUC de 0.92 a été obtenu avec notre jeu de test.
+Et 0.95 avec le jeu d'entrainement.
 
 
 
@@ -966,7 +960,7 @@ plot(predict_rf ~ category, data=testing, xlab="Observe",
 ```
 
 
-### Random Forest Cross Validation 0.87
+### Random Forest Cross Validation [0.92]
 
 
 Prédiction
@@ -1010,7 +1004,7 @@ auc(training$category, pRF_CV_train)
 #jeu de test
 auc(testing$category, pRF_CV)
 ```
-Un Auc de 0.88 a été trouver avec notre jeu de test, et un AUC de 0.96 avec notre jeu d'entrainement.
+Un Auc de 0.92 a été trouver avec notre jeu de test, et un AUC de 0.96 avec notre jeu d'entrainement.
 
 
 ```{r}
@@ -1023,7 +1017,7 @@ plot(pRF_CV ~ category, data=testing, xlab="Observe",
 
 ## Troisième modèle
 
-### SVM 
+### SVM [0.83]
 
 Predictions
 ```{r}
@@ -1074,7 +1068,7 @@ AUC_SVM
 AUC de 0.83 pour un SVM avec une fonction kernel en linéaire sur notre jeu de test, un AUC de 0.95 sur notre jeu d'entrainement.
 
 
-### SVM Validation croisée
+### SVM Validation  [0.81]
 
 Prediction
 ```{r}
@@ -1121,9 +1115,9 @@ AUC_SVM
 
 
 ```
+Auc de 0.81 et 0.92 avec le jeu d'entrainement.
 
-
-## Mise en œuvre d’un modèle supervisé avec maximum 25 variables 0.87
+## Mise en œuvre d’un modèle supervisé avec maximum 25 variables [0.87]
 
 
 On sélectionne les 25 variables les plus importantes parmis le 2ème modèle (random Forest)
@@ -1140,7 +1134,7 @@ varImpPlot(modele_rf)
 ```{r}
  #copie des termes dans l'attente de trouver une méthode pour récup les variables d'une matrice.
 # sachant que les mots ne sont pas constant d'une éxécution du code à l'autre
-modele_25 = randomForest(category~ selon + film + loi + entrepr + president + ete + ministr + festival + scen + gouvern + contr + franc + match + person + art + general + social + equip + droit + national + etat + final + econom + plac
+modele_25 = randomForest(category~ selon + film + loi + entrepris + president + ete + ministr + festival + scen + gouvern + contr + franc + match + person + art + general + social + equip + droit + national + etat + final + econom + plac
                          , data=base_modelisation[nb_lignes,],
                          importance = T,
                          proximity=TRUE,
