@@ -17,25 +17,25 @@ output:
 <style type="text/css">
 
 body{ /* Normal  */
-      font-size: 12px;
+      font-size: 16px;
   }
 td {  /* Table  */
   font-size: 8px;
 }
 h1.title {
-  font-size: 38px;
+  font-size: 55px;
   color: DarkBlue;
 }
 h1 { /* Header 1 */
-  font-size: 28px;
+  font-size: 38px;
   color: DarkBlue;
 }
 h2 { /* Header 2 */
-    font-size: 18px;
+    font-size: 38px;
   color: DarkBlue;
 }
 h3 { /* Header 3 */
-  font-size: 15px;
+  font-size: 35px;
   font-family: "Times New Roman", Times, serif;
   color: DarkBlue;
 }
@@ -104,6 +104,7 @@ Méthode pour éviter le sur-apprentissage : Validation croisée.
 
 
 # Import de la base de données & du jeu test
+<br> </br>
 
 On utilise l'encodage UTF-8 car le monde est un journal français utilisant des caractères spéciaux.
 Le jeu de test est fournis, il a pour élément positif le fait d’être un article de type économie
@@ -115,7 +116,7 @@ test <-
 ```
 
 # Transformation des données
-
+<br> </br>
 Il est nécessaire de transformer ces données, nous n'avons qu'une unique variable explicative : le texte en entier de l'article.
 Cette unique variable explicative est inexploitable, nous souhaitons un "bag of words".
 
@@ -125,13 +126,14 @@ Suppression des deux collones non utiles à la modélisation
 data$date <- NULL
 data$title <- NULL
 ```
-
+<br> </br>
 Nous n'avons pas à réaliser la gestion des manquants, tâche qui peut s'avérer très complexe.
 on supprime les lignes avec des valeurs manquantes (normalement aucune supprimmé)
 ```{r , echo=FALSE}
 which(is.na(data))
 data <- na.omit(data)
 ```
+<br> </br>
 On applique les bons types de variables
 ```{r}
 data$category <- as.factor(data$category)
@@ -139,7 +141,7 @@ data$content <- as.character(data$content)
 str(data)
 ```
 
-
+<br> </br>
 On retire les accents,
 en effet dans l'une des étapes suivantes où l'on retire les caractères qui ne sont pas des lettres,
 les lettres avec accents font des trous dans les mots, rendant un grand nombre de mots inexploitable.
@@ -147,7 +149,7 @@ les lettres avec accents font des trous dans les mots, rendant un grand nombre d
 #Encoding(data$content)
 data$content <- iconv(data$content,from="UTF-8",to="ASCII//TRANSLIT")
 ```
-
+<br> </br>
 On a besoin d'un objet de type corpus, 
 on prend là ou sont les données, ici la collone V6.
 On affiche la première ligne
@@ -157,20 +159,21 @@ contenu[1]$content
 ```
 
 
-
+<br> </br>
 On supprime les caracteres qui ne sont pas des lettres (cette étape posait problème avec les lettres à accent)
 ```{r}
 contenu <- tm_map(contenu, content_transformer(gsub), pattern = "[^a-zA-Z]", replacement = " ")
                  
 contenu[1]$content
 ```
+<br> </br>
 On mets les majuscules en minuscules
 ```{r}
 contenu <- tm_map(contenu, content_transformer(tolower))
 contenu[1]$content
 ```
 
-
+<br> </br>
 On retire les lettres isolés et les mots "vides" tel "quand, comme, hors ..."
 ```{r}
 stopwords_fr <- stopwords("french")
@@ -179,6 +182,7 @@ stopwords_fr <- c(stopwords_fr, "a","b","c","d","e","f","g","h","i","j","k","l",
 contenu <- tm_map(contenu, removeWords , stopwords_fr)
 contenu[1]$content
 ```
+<br> </br>
 Racinisation (sans retirer le premier espace)
 ```{r}
 contenu <- tm_map(contenu, stemDocument, "french")
@@ -187,7 +191,7 @@ contenu <- tm_map(contenu , stripWhitespace)
 contenu <- tm_map(contenu, content_transformer(gsub), pattern = "^\\s+", replacement = "")
 contenu[1]$content
 ```
-
+<br> </br>
 Vectorisation
 
 Nous ne gardons que les mots avec 1000 occurences minimum
@@ -199,13 +203,13 @@ base_modele <- data.frame(as.matrix(dtm))
 #head(base_modele[1,1:5])
 ```
 
-
+<br> </br>
 Le traitement de text effectué, on re-ajoute les données au tableau data pour comparer le texte de départ et le texte obtenu :
 ```{r, echo= FALSE}
 data$content_modif = data.frame(text = sapply(contenu$content, as.character), stringsAsFactors = FALSE)[,1]
 ```
 Le texte obtenu est correct.
-
+<br> </br>
 Combien de fois les mots (variables) ont d'occurence dans le contenu des articles ?
 ```{r}
 summary(colSums(base_modele))
@@ -213,6 +217,7 @@ summary(colSums(base_modele))
 On remarque une médiane à 1612 la haute valeur du maximum est surement dû à des mots vides (stop words) non retirer.
 Nous étudierons un modèle avec moins de variables (mots) dans une prochaine partie.
 
+<br> </br>
 Testons notre hypothèse des stop words non retirer, en effet, il pourrait s'agir de mots apparaissant beaucoup dans une certaine catégorie 
 d'articles.
 Regardons dans combien d'articles les mots sont référencés (sur 10k articles)
@@ -223,7 +228,7 @@ summary(occurences)
 Un maximum à 6237, soit 2/3 des documents.
 Nous verrons l'importance de ces mots dans le modèle lorsque nous réaliserons un modèle supervisé avec un maximum de 25 variables.
 
-
+<br> </br>
 On construit alors notre modèle avec les catégories et les mots en variables.
 ```{r}
 base_modelisation = cbind.data.frame(data, base_modele)
@@ -231,19 +236,19 @@ base_modelisation = base_modelisation[,-2]
 base_modelisation = base_modelisation[,-2]
 ```
 
-
+<br> </br>
 ```{r}
 #On prépare le jeu à 25 variables
 #Somme <- colSums(base_modele)
 #garder <- which(Somme > median(Somme))
 ```
 
-
+<br> </br>
 # Présentation des données
 
-
+<br> </br>
 ## Analyse de la dispersion
-
+<br> </br>
 Variables à expliquer : culture, economie, planete, politique, societe, sport.
 
 439 Variables explicatives : les mots qui apparaissent plus de 1000 fois.
@@ -254,7 +259,7 @@ Avec ni gestion des manquants, ni gestion des fautes d'orthographes à réaliser
 
 Avant de réaliser des modèles de prédictions, détaillons le jeu de données transformé obtenu.
 Notre plus grande menace serait une corrélation globale de nos variables.
-
+<br> </br>
 Visualisons graphiquement si nos variables sont très corrélés avec une heatmap : 
 ```{r message=FALSE, paged.print=FALSE, r,echo=FALSE}
 #source("http://www.sthda.com/upload/rquery_cormat.r")
@@ -266,7 +271,7 @@ Visualisons graphiquement si nos variables sont très corrélés avec une heatma
 
 Les variables sont très peu corrélés, 
 
-
+<br> </br>
 Pour complèter cela, on réalise une analyse en composante principale avec la catégorie en variable qualitative, 
 ainsi en affichant les ellipse nous verrons les catégories qui s'opposent et quelles variables (les mots dans notre cas) sont les plus responsables des axes, autrement dit les plus importants.
 ```{r,fig.show='hide'}
@@ -284,7 +289,7 @@ res.pca = PCA(base_modelisation_ACP, scale.unit=TRUE, ncp=5, quali.sup=1, graph=
 #)
 ```
 
-
+<br> </br>
 ```{r}
 plot.PCA(res.pca, axes=c(1, 2), choix="ind", habillage=1,label="var",graph.type = "ggplot")
 ```
@@ -294,7 +299,7 @@ Nous pouvons affirmer que les données sont très dispersés, leur non-corrélat
 
 ## Nuage de mots pour les catégories
 
-
+<br> </br>
 Une fois la non-corrélation globale de nos variables assurés,
 Examinons graphiquement grâce à la librairie wordcloud les mots les plus fréquents par catégorie par un nuage de mots.
 
@@ -317,32 +322,32 @@ motsFreqPlanete <- data.frame(sort(table(strsplit(motPlanete,"\\s+")),decreasing
 ```
 
 Création des nuages de mots
-
+<br> </br>
 Sport
 ```{r}
 wordcloud2(data = motsFreqSport[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
 ```
-
+<br> </br>
 Societe
 ```{r}
 wordcloud2(data = motsFreqSociete[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
 ```
-
+<br> </br>
 Economie
 ```{r}
 wordcloud2(data = motsFreqEconomie[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
 ```
-
+<br> </br>
 Culture
 ```{r}
 wordcloud2(data = motsFreqCulture[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
 ```
-
+<br> </br>
 Politique
 ```{r}
 wordcloud2(data = motsFreqPolitique[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
 ```
-
+<br> </br>
 Planete
 ```{r}
 wordcloud2(data = motsFreqPlanete[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
@@ -355,7 +360,7 @@ Cependant notre objectif n'est pas descriptif mais prédictif.
 
 
 
-
+<br> </br>
 Avant de passer à la partie suivante, supprimons les données que nous n'utiliserons plus
 ```{r eval=FALSE, warning=FALSE, include=FALSE}
 rm(motsFreqPlanete)
@@ -380,10 +385,10 @@ rm(dtm)
 rm(stopwords_fr)
 ```
 
-
+<br> </br>
 # Premier modèle : CART
 
-
+<br> </br>
 ## Introduction Modèle Supervisé
 Apprentissage supervisé: expliquer/prédire  une sortie Y à partir d’entrées X 
 Nous devons éviter le sur-apprentissage, pour cela nous utiliserons la cross validation.
@@ -391,9 +396,9 @@ Nous devons éviter le sur-apprentissage, pour cela nous utiliserons la cross va
 ![CrossValidation.png](CrossValidation.png)
 
 
-Modèle supervisé utilisés : CART , Randomforest, k-NN
+Modèle supervisé utilisés : CART , Randomforest, SVM
 
-
+<br> </br>
 On commence par construire un modèle d'apprentissage, composé de 80% des lignes de base_modelisation.
 Le jeu de test est quand à lui fourni.
 
@@ -411,7 +416,7 @@ Notre premier modèle est un arbre de décision.
 Le principe est que, tant qu'on a pas atteind la taille minimal de noeuds enfants on recherche un seuil qui permet de séparer le noeud parents en 2 noeuds enfants en maximisant notre critère de répartition/de fractionnement.
 
 Notre critère de répartition est le GINI, il est par défaut dans la fonction rpart.
-
+<br> </br>
 On prend un cp choisi arbitrairement.
 ```{r}
 modele_CART <-rpart(category~. ,
@@ -423,12 +428,12 @@ modele_CART <-rpart(category~. ,
 visTree(modele_CART)
 ```
 ## Hyperparamètre selection
-
+<br> </br>
 On recherche le cp optimal.
 ```{r}
 plotcp(modele_CART)
 ```
-
+<br> </br>
 On affine la prédiction en choisissant l'arbre avec l'erreur de prédiction la plus basse
 ```{r}
 Meilleur <- which.min(modele_CART$cptable[,"xerror"])
@@ -449,7 +454,7 @@ visTree(Modele_Cart_Arbre)
 #print(Besttree$cptable)
 ```
 
-
+<br> </br>
 ```{r}
 #attributes(Modele_Cart_Arbre)
 #construction plot
@@ -460,8 +465,8 @@ visTree(Modele_Cart_Arbre)
 
 ## Validation croisée
 Ce modèle est très sensible à l'échantillonage, d'où la grande importance de la validation croisée pour lui.
-
-Observons combien faut-il de temps pour calculer 100 arbres à mon ordinateur.
+<br> </br>
+Observons combien faut-il de temps pour calculer un arbre 
 ```{r}
 debut <- Sys.time()
 tree_temps <-rpart(category~. ,
@@ -477,29 +482,27 @@ print(paste("Pour générer un arbre, il faut : ", TempsArbre))
   11 secondes ! Soit 320 arbres générés à l'heure. Voir plus selon le nombre de coeurs logiques pouvant être utilisés pour des calculs en simultanés.
 
 
-
+<br> </br>
 Créons plusieurs modèle avec des cp différents
 ```{r}
 cp_expand = expand.grid( .cp = seq(from = 0, to = 0.01, by = 0.00001)) 
 ```
 
-
-On créé un grand nombre d'arbres par random forest, avec des configurations différentes du mtry, et grace à la librairie doSNOW on execute
-4 fois le code afin d'obtenir une validation croisée.
+<br> </br>
+On créé un grand nombre d'arbres par random forest, avec des configurations différentes du mtry
 ```{r,warning=FALSE}
 require(caret)
 require(doSNOW)
   
 #parametre du cv
 cv.cntrl <- trainControl(method = "cv", 
-                           number = 4, 
+                           number = 8, 
                            search = "grid")
   
- #on cree des instances , càd le nbre de fois que l'on execute le programme,
-#mon processeur a 4 coeurs, je mets donc 4,
-# il s'agira donc d'une validation croisée de degré 4.
-# il s'agit de notre deuxième multiplieur
-  cl <- makeCluster(4, 
+ #on cree des instances , afin d'executer plus vite par l'utilisation de tout les coeurs
+#mon processeur a 8 coeurs logiques , je mets donc 8,
+
+  cl <- makeCluster(8, 
                     type = "SOCK") 
   registerDoSNOW(cl)
   
@@ -514,32 +517,72 @@ cv.cntrl <- trainControl(method = "cv",
   
 
   stopCluster(cl)
-#On calcule ainsi cp expand x nbre de clust  = nbre d'arbres 
-  #                   1000  x     4          = 4000
+#On calcule ainsi cp expand x k-fold         = nbre d'arbres 
+  #                   1000  x     8          = 8000
 ```
 
 
-
+<br> </br>
 On affiche le modèle obtenu
 ```{r}
 plot(modele_CART_CV)
 ```
 
-
+## Hyperparametre CV
+<br> </br>
 On choisit à nouveau le cp
 ```{r,cache=FALSE}
 modele_Cart_cv_best <- modele_CART_CV$bestTune$cp
-modele_cart_cv_final <- modele_CART_CV$results %>% filter(cp == modele_Cart_cv_best)
+
+#meilleur cp
+modele_Cart_cv_best
+cp_expand = expand.grid( .cp = modele_Cart_cv_best) 
+
+#modele_cart_cv_final <- modele_CART_CV$results %>% filter(cp == modele_Cart_cv_best)
+```
+<br> </br>
+On recherche à nouveau avec le cp optimisé.
+```{r}
+require(caret)
+require(doSNOW)
+  
+#parametre du cv
+cv.cntrl <- trainControl(method = "cv", 
+                           number = 8, 
+                           search = "grid")
+  
+
+  cl <- makeCluster(8, 
+                    type = "SOCK") 
+  registerDoSNOW(cl)
+  
+  
+  set.seed(1234)
+ 
+
+    modele_CART_CV <- train(x = training[,names(base_modelisation[nb_lignes,]) != 'category'],
+                    y = training$category,
+                     method = 'rpart', trControl = cv.cntrl, 
+                     tuneGrid = cp_expand, metric = "Accuracy")
+  
+
+  stopCluster(cl)
 ```
 
+
 ```{r}
-modele_cart_cv_final
+#modele_cart_cv_final
 ```
 
 ```{r}
 #print(modele_CART_CV$finalModel)
 ```
 
+```{r}
+#print(modele_CART_CV$finalModel)
+```
+
+<br> </br>
 Importance des variables (si l'on choisit ce modèle pour réaliser un modèle limité à 25 variables)
 ```{r}
 sort(modele_CART_CV$finalModel$variable.importance, decreasing = TRUE)[1:25]
@@ -549,7 +592,7 @@ sort(modele_CART_CV$finalModel$variable.importance, decreasing = TRUE)[1:25]
 # Deuxième modèle : Random Forest
 
 ## Création du modèle RF
-
+<br> </br>
 Modélisation : Random Forest, algorithme de bagging 
 
 
@@ -557,9 +600,7 @@ Le principe est de créer n arbres non corrélés entre eux puis faire voter cha
 
 Pour faire varier un arbre on sélectionne une partie différente des données à chaque noeud et ne construisant des arbres que sur une partie des individus
 
-Nous commencons avec les paramètres suivants :
-- mtry : 20
-- nbtree: 100
+Les paramètres que nous optimiserons seront le mtry et le ntree, le maxnodes (nbre de feuilles) aurait pu aussi être optimiser.
 
 Le paramètre mtry représente le nombre de variables échantillonnées de façon aléatoire comme candidats à chaque fractionnement.
 et nbtree est le nombre d'arbres générés.
@@ -572,15 +613,20 @@ modele_rf = randomForest(category~.
                          , data=training,
                          importance = T,
                          proximity=TRUE,
-                         ntree = 100)
+                         ntree = 5000)
 plot(modele_rf)
 #print(modele_rf)
 #modele_rf
 #plot(modele_rf)
 ```
+On observe une stagnation de l'erreur à partir de __ arbres, nous utiliserons cette donnée pour la cross validation(on ne la calcule pas directement sur la cross validation par manque de puissance de calcul)
+
+A noter que pour ce modele, nous sommes passer directement à la cross validation, sans optimiser les hyperparametres de base.
+
 
 ## Cross Validation
 
+<br> </br>
 Observons combien faut-il de temps pour calculer 100 arbres à mon ordinateur.
 ```{r}
 debut <- Sys.time()
@@ -594,35 +640,32 @@ print(paste("Pour cent arbres, il faut : ", TempsCent))
   1 minute et 45 secondes !
   
   En 3h, il y a 180 minutes, je peux donc générer 10 000 arbres en 3h. 
-et en 20 minutes je peux en calculer 1000.
-Commençons par l'option à 1000 arbres.
+et en 20 minutes je peux en calculer 1000. Et ce par coeurs logiques, soit potientiellement 8 fois plus.
 
 
 
+<br> </br>
 Créons plusieurs modèle avec des mtry allant de 1 variables à toutes.
-En tout 50 configurations seront testés.
+En tout 439 configurations seront testés.
 ```{r}
-mtry_expand = expand.grid( .mtry = seq(from = 1, to = (ncol(base_modelisation[nb_lignes,])-1), length.out = 50))
+mtry_expand = expand.grid( .mtry = seq(from = 1, to = (ncol(base_modelisation[nb_lignes,])-1), length.out = 439))
 #length.out : premier multiplieur
 ```
 
-
+<br> </br>
 On créé un grand nombre d'arbres par random forest, avec des configurations différentes du mtry, et grace à la librairie doSNOW on execute
-4 fois le code afin d'obtenir une validation croisée.
+8 fois plus vite le code.
 ```{r,warning=FALSE}
 require(caret)
 require(doSNOW)
   
 #parametre du cv
 cv.cntrl <- trainControl(method = "cv", 
-                           number = 4, 
+                           number = 8, 
                            search = "grid")
   
- #on cree des instances , càd le nbre de fois que l'on execute le programme,
-#mon processeur a 4 coeurs, je mets donc 4,
-# il s'agira donc d'une validation croisée de degré 4.
-# il s'agit de notre deuxième multiplieur
-  cl <- makeCluster(4, 
+
+  cl <- makeCluster(8, 
                     type = "SOCK") 
   registerDoSNOW(cl)
   
@@ -638,32 +681,74 @@ cv.cntrl <- trainControl(method = "cv",
                       ntree = 100)
     #ntree est notre dernier multiplieur.
   
-  # Processing is done, stop the cluster
-  stopCluster(cl)
-#On calcule ainsi length.out x nbre de clust x ntree = nbre d'arbres de notre modèle
-  #                 50       x     4         x 100   = 20000
   
-  #sachant que l'on utilise 4 coeurs logiques, cela prendra 1h30 à générer ce modèle.
+  stopCluster(cl)
+#On calcule ainsi length.out x kfold         x ntree = nbre d'arbres de notre modèle
+  #                 439      x     8         x 100   = 351 000
+  
+  
 ```
-
+<br> </br>
 Quel est le meilleur paramètre pour mtry
 ```{r}
-modele3_mtry <- modele_rf_cv$bestTune$mtry
-modele_rf_cv_best <- modele_rf_cv$results %>% filter(mtry==modele3_mtry)
+modele_mtry <- modele_rf_cv$bestTune$mtry
+#modele_rf_cv_best <- modele_rf_cv$results %>% filter(mtry==modele_mtry)
 #le meilleur mtry est de :
-modele3_mtry
-```
+modele_mtry
+mtry_expand <- expand.grid(.mtry = modele_mtry)
 
+```
+<br> </br>
 On affiche le modèle obtenu
 ```{r}
 plot(modele_rf_cv)
 #plot(modele_rf_cv$finalModel$predicted)
 ```
+<br> </br>
+On re-execute avec la valeur correct du mtry.
+```{r}
+require(caret)
+require(doSNOW)
+  
+#parametre du cv
+cv.cntrl <- trainControl(method = "cv", 
+                           number = 8, 
+                           search = "grid")
+  
+
+  cl <- makeCluster(8, 
+                    type = "SOCK") 
+  registerDoSNOW(cl)
+  
+  
+  set.seed(1234)
+ 
+  
+  #méthode random forest 
+    modele_rf_cv <- train(x = base_modelisation[nb_lignes,][,names(base_modelisation[nb_lignes,]) != 'category'],
+                      y = base_modelisation[nb_lignes,]$category, 
+                      method = 'rf', trControl = cv.cntrl, 
+                      tuneGrid = mtry_expand, metric = "Accuracy",
+                      ntree = 100)
+    #ntree est notre dernier multiplieur.
+  
+  
+  stopCluster(cl)
+#On calcule ainsi length.out x kfold         x ntree = nbre d'arbres de notre modèle
+  #                 439      x     8         x 100   = 351 000
+  
+```
+
+
+
 
 # Troisième modèle 
 
 ## test K-nn
 
+<br> </br>
+Certains algorithmes sont très sensibles à la variance des variables, ainsi Lasso, k-nn et SVM ont besoin d'une normalisation (voir standardisation) 
+pour obtenir des résultats corrects. Cet aspect a été oublier lors de notre premier test de k-NN
 ```{r}
 #NROW(training)
 # Renvoie 8000 -> racine carré de 8000 = 89.44 -> on créé deux modèles avec un k=89 et un avec k=90 
@@ -683,62 +768,117 @@ plot(modele_rf_cv)
 
 
 ## Création modèle SVM
-
-Création d'un jeu de donnée normaliser afin d'obtenir de meilleurs résultats.
+<br> </br>
+Création d'un jeu de donnée normalisé, en effet les données sont à variance forte.
 ```{r}
 training_Scale <- training
 testing_Scale <- testing
 training_Scale[-1] <- scale(training_Scale[-1])
 testing_Scale[-1] <- scale(testing_Scale[-1])
 ```
-
+<br> </br>
 Création du modèle SVM grâce à la librairie e1071
+
+Une fonction kernel transforme les données en trouvant un hyperplan qui sépare les différentes catégories (problème de classification), grâce à cette fonction, nos données sont toujours linéairement séparables.
+On test plusieurs fonctions kernel afin de trouver la meilleure.
 ```{r}
 #install.packages('e1071')
-library(e1071)
+#library(e1071)
  
+#modele_SVM = svm(formula = category~.,
+#                 data = training_Scale,
+  #               type = 'C-classification',
+    #             kernel = 'linear')
+
+# radial kernel est meilleur
+library(e1071)
 modele_SVM = svm(formula = category~.,
                  data = training_Scale,
                  type = 'C-classification',
-                 kernel = 'linear')
+                 kernel = 'radial')
+
 ```
 
 ## Hyperparamètre 
+<br> </br>
 On optimise les paramètres (model selection) 
+Nous choississons d'optimiser cost et epsilon,
+si nous avions plus de puissance de calcul nous aurions aussi optimiser gamma.
 ```{r}
 #on recherche dans une grille 
-Tune_SVM <- tune(svm, category~.,  data = training_Scale,
-ranges = list(epsilon = seq(0,1,0.2), cost = 2^(2:9))
-)
+#Tune_SVM <- tune(svm, category~.,  data = training_Scale,
+#ranges = list(epsilon = seq(0,1,0.2), cost = 2^(2:9))
+#)
 
 # affichage de la recherche.
-print(Tune_SVM)
-plot(Tune_SVM)
+#print(Tune_SVM)
+#plot(Tune_SVM)
 
 ```
+Résultat du bloc au dessus :
+![](SVM_Tune.png)
 
+<br> </br>
+Recherchons dans une plus grande étendue : 
 
+```{r eval=FALSE, include=FALSE}
+#on recherche dans une grille 
+#library(e1071)
+#require(doSNOW)
+
+ # cl <- makeCluster(8, 
+ #                   type = "SOCK") 
+ # registerDoSNOW(cl)
+  
+  
+#Tune_SVM <- tune(svm, category~.,  data = training_Scale,
+#ranges = list(epsilon = seq(0,10,1), cost = 2^(2:9))
+#)
+  # stopCluster(cl)
+# affichage de la recherche.
+#print(Tune_SVM)
+#plot(Tune_SVM)
+
+```
+![](SVMTune2.png)
+<br> </br>
 
 On sélectionne le meilleur modèle.
 ```{r}
-SVM_Opti <- Tune_SVM$best.model
+#SVM_Opti <- Tune_SVM$best.model
+#SVM_Opti$cost
+# 4 en cost
+
+#SVM_Opti$epsilon
+# 0 en epsilon
 ```
 
-## Validation croisée
 
+<br> </br>
+```{r}
+SVM_Opti = svm(formula = category~.,
+                 data = training_Scale,
+                 type = 'C-classification',
+                 kernel = 'radial',
+               cost=4,
+               epsilon=0)
+```
+
+
+
+## Validation croisée
+<br> </br>
 ```{r}
 require(caret)
 require(doSNOW)
   
 #parametre du cv
 cv.cntrl <- trainControl(method = "cv", 
-                           number = 4, 
+                           number = 8, 
                            search = "grid")
   
- #on cree des instances , càd le nbre de fois que l'on execute le programme,
-#mon processeur a 4 coeurs, je mets donc 4,
-# il s'agira donc d'une validation croisée de degré 4.
-  cl <- makeCluster(4, 
+
+  cl <- makeCluster(8, 
                     type = "SOCK") 
   registerDoSNOW(cl)
   
@@ -746,13 +886,15 @@ cv.cntrl <- trainControl(method = "cv",
   set.seed(1234)
  
   
-  #méthode SVM avec fonction kernel radial (et non linéaire comme la première)
+  #méthode SVM avec fonction kernel radial 
   modele_SVM_CV <- train(
   category~ .,
   data = training_Scale,
   method = 'svmRadial',
   preProcess = c("center", "scale"),
-  trCtrl = cv.cntrl
+  trCtrl = cv.cntrl,
+  cost=4,
+  epsilon=0
 )
     
   
@@ -764,11 +906,15 @@ cv.cntrl <- trainControl(method = "cv",
 ```
 
 # Comparaison modèle
+<br> </br>
+under-fitting lorsque notre modèle créé prédit avec beaucoup d'erreurs sur le jeu d'entrainement et de test.
+over-fitting lorsque notre modèle créé prédit avec très peu/aucune erreur le jeu d'entrainement mais avec beaucoup d'erreur le jeu de test.
+<br> </br>
 
 ## Evaluation du premier modèle 
 
 ### CART [0.86]
-
+<br> </br>
 Prédictions
 ```{r}
 
@@ -793,7 +939,7 @@ p_CART <- predict(Modele_Cart_Arbre,
 
 
 ```
-
+<br> </br>
 Matrices de confusion 
 ```{r}
 
@@ -809,7 +955,7 @@ conf_CART
 
 ```
 
-
+<br> </br>
 
 AUC
 ```{r,warning=FALSE,cache=TRUE}
@@ -844,14 +990,16 @@ auc(testing$category, p_CART )
 ```
 Un Auc de 0.86 a été obtenu avec notre jeu test.
 Et 0.90 avec le jeu d'entrainement.
+
+<br> </br>
 Visualisation de la prédiction
 ```{r}
-plot(prediction_tree1 ~ category, data=testing, xlab="Observe",
+plot(p_CART ~ category, data=testing, xlab="Observe",
        ylab="Predis")
 ```
 
 ### CART Cross Validation 0.88
-
+<br> </br>
 Prédiction
 ```{r,warning=FALSE}
 #jeu d'entrainement
@@ -863,7 +1011,7 @@ pCART_CV <- predict(modele_CART_CV, newdata=testing, type= "prob")
 pCART_CV <- pCART_CV[,1]
 
 ```
-
+<br> </br>
 Matrice de confusion jeu d'entrainement
 ```{r}
 MatriceConfu_CART_CV <- confusionMatrix(data = modele_CART_CV,
@@ -874,7 +1022,7 @@ MatriceConfu_CART_CV <- confusionMatrix(data = modele_CART_CV,
 MatriceConfu_CART_CV
 ```
 
-
+<br> </br>
 Matrice de confusion Jeu de test
 ```{r}
 MatriceConfu_CART_CV <- confusionMatrix(data = modele_CART_CV,
@@ -884,7 +1032,7 @@ MatriceConfu_CART_CV <- confusionMatrix(data = modele_CART_CV,
 #confu3 <- c(confu3, MatriceConfu_CART_CV$overall[labels[4:5]])
 MatriceConfu_CART_CV
 ```
-
+<br> </br>
 AUC
 ```{r,cache=TRUE}
 length(testing$category)
@@ -899,7 +1047,7 @@ auc(testing$category, pCART_CV)
 Un Auc de 0.85 a été trouver avec notre jeu de test.
 Et 0.89 avec le jeu d'entrainement.
 
-
+<br> </br>
 ```{r}
 #Visualisation de la prédiction
 plot(pCART_CV ~ category, data=testing, xlab="Observe",
@@ -911,7 +1059,7 @@ plot(pCART_CV ~ category, data=testing, xlab="Observe",
 ## Evaluation du deuxième modèle : 
 
 ### Random Forest [0.92]
-
+<br> </br>
 Predictions
 ```{r}
 #jeu d'entrainement
@@ -921,7 +1069,7 @@ predict_rf_train <- predict(modele_rf, newdata=training, type= "prob")[,1]
 predict_rf <- predict(modele_rf, newdata=testing, type= "prob")[,1]
 ```
 
-
+<br> </br>
 AUC
 ```{r,cache=TRUE,warning=FALSE}
 #length(testing$category)
@@ -938,21 +1086,22 @@ Et 0.95 avec le jeu d'entrainement.
 
 
 Observons les résultats d'un AUC de grande qualité : 
-
+<br> </br>
 Test Prediction
 ```{r}
 table(predict_rf, testing$category)[1,]
 ```
+<br> </br>
 Fréquence conditionel
 ```{r}
 table(predict_rf, testing$category)[1:7,]
 ```
-
+<br> </br>
 ```{r}
 plot(margin(modele_rf, testing$category))
 ```
 
-
+<br> </br>
 ```{r}
 #Visualisation de la prédiction
 plot(predict_rf ~ category, data=testing, xlab="Observe",
@@ -962,7 +1111,7 @@ plot(predict_rf ~ category, data=testing, xlab="Observe",
 
 ### Random Forest Cross Validation [0.92]
 
-
+<br> </br>
 Prédiction
 ```{r}
 #jeu d'entrainement
@@ -976,6 +1125,7 @@ pRF_CV <- pRF_CV[,1]
 
 
 ```
+<br> </br>
 Matrice de confusion
 ```{r}
 #jeu d'entrainement
@@ -994,7 +1144,7 @@ MatriceConfu3
 #confu3 <- c(confu3, MatriceConfu3$overall[labels[4:5]])
 
 ```
-
+<br> </br>
 AUC
 ```{r,cache=TRUE}
 #length(base_modelisation[-nb_lignes,]$category)
@@ -1006,7 +1156,7 @@ auc(testing$category, pRF_CV)
 ```
 Un Auc de 0.92 a été trouver avec notre jeu de test, et un AUC de 0.96 avec notre jeu d'entrainement.
 
-
+<br> </br>
 ```{r}
 #Visualisation de la prédiction
 plot(pRF_CV ~ category, data=testing, xlab="Observe",
@@ -1017,8 +1167,8 @@ plot(pRF_CV ~ category, data=testing, xlab="Observe",
 
 ## Troisième modèle
 
-### SVM [0.83]
-
+### SVM [0.84]
+<br> </br>
 Predictions
 ```{r}
 #jeu d'entrainement
@@ -1026,7 +1176,7 @@ SVM_pred_training = predict(SVM_Opti, newdata = training_Scale)
 #jeu de test
 SVM_pred = predict(SVM_Opti, newdata = testing_Scale)
 ```
-
+<br> </br>
 Matrices de confusion
 ```{r}
 #Tableau_Pred_SVM = table(testing_Scale[,1], SVM_pred)
@@ -1044,7 +1194,7 @@ MatriceConfu_SVM
 
 
 ```
-
+<br> </br>
 AUC
 ```{r,warning=FALSE}
 library(ROCR)
@@ -1065,18 +1215,18 @@ AUC_SVM
 
 
 ```
-AUC de 0.83 pour un SVM avec une fonction kernel en linéaire sur notre jeu de test, un AUC de 0.95 sur notre jeu d'entrainement.
+AUC de 0.84 pour un SVM avec une fonction kernel en linéaire sur notre jeu de test, un AUC de 0.95 sur notre jeu d'entrainement.
 
 
 ### SVM Validation  [0.81]
-
+<br> </br>
 Prediction
 ```{r}
 SVM_pred_CV_train = predict(modele_SVM_CV, newdata = training_Scale)
 
 SVM_pred_CV = predict(modele_SVM_CV, newdata = testing_Scale)
 ```
-
+<br> </br>
 Matrice de confusion
 ```{r}
 #Tableau_Pred_SVM = table(testing_Scale[,1], SVM_pred)
@@ -1094,7 +1244,7 @@ MatriceConfu_SVM
 
 
 ```
-
+<br> </br>
 AUC
 ```{r,warning=FALSE}
 library(ROCR)
@@ -1119,7 +1269,7 @@ Auc de 0.81 et 0.92 avec le jeu d'entrainement.
 
 ## Mise en œuvre d’un modèle supervisé avec maximum 25 variables [0.87]
 
-
+<br> </br>
 On sélectionne les 25 variables les plus importantes parmis le 2ème modèle (random Forest)
 Ainsi qu'une visualisation graphique de leur importance.
 ```{r}
@@ -1130,7 +1280,7 @@ varImpPlot(modele_rf)
 ```
 
 
-
+<br> </br>
 ```{r}
  #copie des termes dans l'attente de trouver une méthode pour récup les variables d'une matrice.
 # sachant que les mots ne sont pas constant d'une éxécution du code à l'autre
@@ -1141,6 +1291,8 @@ modele_25 = randomForest(category~ selon + film + loi + entrepris + president + 
                          ntree = 100)
 plot(modele_25)
 ```
+
+<br> </br>
 Prediction
 ```{r}
 #jeu d'entrainement
@@ -1149,7 +1301,7 @@ predict_25_train <- predict(modele_25, newdata=training, type= "prob")[,1]
 predict_25 <- predict(modele_25, newdata=testing, type= "prob")[,1]
 ```
 
-
+<br> </br>
 AUC
 ```{r,cache=TRUE}
 library(ROCR)
@@ -1165,21 +1317,21 @@ AUC jeu d'entrainement : 0.93
 AUC jeu de test : 0.87
 
 
-Une perte d'environ 0.006 d'AUC pour un passage de 440 variables à 25.
-Cette perte est négligable
+L'AUC augmente de 0.01 pour un passage de 440 variables à 25.
 
 
+<br> </br>
 Test Prediction
 ```{r}
 table(predict_25, testing$category)[1,]
 ```
-
+<br> </br>
 Fréquence conditionel (prédiction avec jeu d'entrainement)
 ```{r}
 table(predict(modele_25), training$category)
 ```
 
-
+<br> </br>
 ```{r}
 #Visualisation de la prédiction
 plot(predict_25 ~ category, data=base_modelisation[-nb_lignes,], xlab="Observe",
@@ -1188,6 +1340,6 @@ plot(predict_25 ~ category, data=base_modelisation[-nb_lignes,], xlab="Observe",
 
 
 # Conclusion
-
+<br> </br>
 Nos 3 modèles sont utilisables.
 La forte réduction du nombre de variable sur le modèle randomForest a eu un impact mineur sur l'AUC.
