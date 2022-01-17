@@ -1,4 +1,3 @@
-base
 NLP
 tm
 wordcloud2
@@ -21,3 +20,4 @@ doSNOW
 class
 dplyr
 e1071
+kernlab
