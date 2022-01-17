@@ -8,7 +8,5 @@ Fonction de perte/évaluation : Matrice de confusion/AUC
 
 
 ### TO DO
-* Hyperparamètre gamma pour SVM
-* Hyperparamètres des validations croisées
 * Conclusion rédaction
 * Mise en forme Html
