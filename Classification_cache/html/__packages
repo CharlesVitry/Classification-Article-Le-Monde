@@ -21,3 +21,4 @@ class
 dplyr
 e1071
 kernlab
+base

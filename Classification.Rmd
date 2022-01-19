@@ -1,6 +1,6 @@
 ---
 title: |
-  ![](RStudio_Logo.png){width=125%}  
+  ![](images/RStudio_Logo.png){width=125%}  
   Classification des articles du monde en fonction de leur contenu
 author: 
 - Charles Vitry
@@ -83,6 +83,7 @@ require(ROCR)
 ```
 
 Nous souhaitons classifier un article du monde selon son contenu,
+
 Nous possèdons pour cela un jeu de données avec la catégorie et le contenu de 10k articles.
 
 Pour mener notre tâche à bien nous allons effectuer un prétraitement des données textuelles par la transformation de données (textuelles) non structurées en un format de données structuré.
@@ -96,11 +97,13 @@ Nous utiliserons ainsi 3 algorithmes pour la classification dont un dans une ver
 Nous finirons par l'évaluation des résultats de la prédiction des classifications sur le jeu de test.
 
 **Résumé**
-Ensemble variables explicatives Xi : nbre d'occurences des mots dans l'article.
-Variable à expliquer : la catégorie de l'article.
-Fonction de perte/évaluation : Matrice de confusion/AUC
-Algorithmes : CART, RandomForest, SVM
-Méthode pour éviter le sur-apprentissage : Validation croisée.
+<ul>
+* Ensemble variables explicatives Xi : nbre d'occurences des mots dans l'article.
+* Variable à expliquer : la catégorie de l'article.
+* Fonction de perte/évaluation : Matrice de confusion/AUC
+* Algorithmes : CART, RandomForest, SVM
+* Méthode pour éviter le sur-apprentissage : Validation croisée.
+</ul>
 
 # Introduction
 <br> </br>
@@ -258,7 +261,7 @@ Variables à expliquer : culture, economie, planete, politique, societe, sport.
 
 A noter que nous n'effectuons que les dernières partie d'un projet de Data Science,
 puisque les données nous ont été fournis.
-Avec ni gestion des manquants, ni gestion des fautes d'orthographes à réaliser (puisqu'il s'agit d'articles de presse).
+Avec ni gestion des manquants, ni gestion des fautes d'orthographes/gestion de mots anglais à réaliser (puisqu'il s'agit d'articles de presse).
 
 Avant de réaliser des modèles de prédictions, détaillons le jeu de données transformé obtenu.
 Notre plus grande menace serait une corrélation globale de nos variables.
@@ -269,10 +272,10 @@ Visualisons graphiquement si nos variables sont très corrélés avec une heatma
  
 #rquery.cormat(base_modelisation[, c(2:440)],graphType="heatmap")
 ```
-[](HeatMap.png)
+![](images/HeatMap.png)
 
 
-Les variables sont très peu corrélés, 
+Les variables sont très peu corrélés !
 
 <br> </br>
 Pour complèter cela, on réalise une analyse en composante principale avec la catégorie en variable qualitative, 
@@ -296,7 +299,7 @@ ainsi en affichant les ellipse nous verrons les catégories qui s'opposent et qu
 ```{r}
 #plot.PCA(res.pca, axes=c(1, 2), choix="ind", habillage=1,label="var",graph.type = "ggplot")
 ```
-![](PCA_Graph.png)
+![](images/PCA_Graph.png)
 
 Les deux premières dimensions ne rendent compte que de 10% de la variance, les graphiques sont  inexploitables.
 Nous pouvons affirmer que les données sont très dispersés, leur non-corrélation est très forte.
@@ -335,40 +338,40 @@ Sport
 ```{r}
 #wordcloud2(data = motsFreqSport[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
 ```
-![](Sport_WordCloud.png)
+![](images/Sport_WordCloud.png)
 <br> </br>
 Societe
 ```{r}
 #wordcloud2(data = motsFreqSociete[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
 ```
-![](Societe_WordCloud.png)
+![](images/Societe_WordCloud.png)
 
 <br> </br>
 Economie
 ```{r}
 #wordcloud2(data = motsFreqEconomie[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
 ```
-![](Economie_WordCloud.png)
+![](images/Economie_WordCloud.png)
 
 <br> </br>
 Culture
 ```{r}
 #wordcloud2(data = motsFreqCulture[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
 ```
-![](Culture_WordCloud.png)
+![](images/Culture_WordCloud.png)
 <br> </br>
 Politique
 ```{r}
 #wordcloud2(data = motsFreqPolitique[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
 ```
-![](Politique_WordCloud.png)
+![](images/Politique_WordCloud.png)
 
 <br> </br>
 Planete
 ```{r}
 #wordcloud2(data = motsFreqPlanete[1:500,],minSize = 5, size = 3,shape = 'star',color = "random-light", backgroundColor = "grey")
 ```
-![](Planete_WordCloud.png)
+![](images/Planete_WordCloud.png)
 
 De nombreux mots semblent spécifiques à une seule catégorie, nous devrions obtenir de bons indicateurs de prédiction.
 D'un point de vue descriptif, si l'on ommet les mots vides non supprimmés, on peut expliquer Y (la catégorie) selon les mots présent dans l'article. En effet, si l'article parle d'un film, cela sera un article de catégorie culture.
@@ -406,6 +409,8 @@ rm(stopwords_fr)
 A noter que nous pouvions effectuer ce changement sur nos données, en affectant 1 si l'article est de type économie et 0 sinon.
 
 Cependant, la prédiction de toute les catégories possible nous semble avoir plus de sens.
+
+Nous concluerons à la fin sur l'impact de cette décision.
 ```{r}
 #data$category <- gsub("economie", "1", data$category)
 #data$category <- gsub("[^1]+", "0", data$category)
@@ -420,7 +425,7 @@ Cependant, la prédiction de toute les catégories possible nous semble avoir pl
 Apprentissage supervisé: expliquer/prédire  une sortie Y à partir d’entrées X 
 Nous devons éviter le sur-apprentissage, pour cela nous utiliserons la cross validation.
 
-![CrossValidation.png](CrossValidation.png)
+![CrossValidation.png](images/CrossValidation.png){width=50%}
 
 
 Modèle supervisé utilisés : CART , Randomforest, SVM
@@ -516,7 +521,8 @@ Observons combien faut-il de temps pour calculer un arbre
 
 <br> </br>
 Quel paramètre devons nous optimiser pour le modèle Cart
-![](CART opti.png)
+![](images/CART opti.png)
+
 Optimisons le cp.
 <br> </br>
 Créons plusieurs modèle avec des cp différents
@@ -525,7 +531,7 @@ Créons plusieurs modèle avec des cp différents
 ```
 
 <br> </br>
-On créé un grand nombre d'arbres par random forest, avec des configurations différentes du mtry
+On test un grand nbre de cp.
 ```{r,warning=FALSE}
 #require(caret)
 #require(doSNOW)
@@ -658,7 +664,7 @@ et nbtree est le nombre d'arbres générés.
 #modele_rf
 #plot(modele_rf)
 ```
-![](nbtrees.png)
+![](images/nbtrees.png)
 On observe une stagnation de l'erreur à partir de 400 arbres, nous utiliserons cette donnée pour la cross validation(on ne la calcule pas directement sur la cross validation par manque de puissance de calcul)
 
 A noter que pour ce modele, nous sommes passer directement à la cross validation, sans optimiser les hyperparametres de base.
@@ -685,7 +691,7 @@ plot(modele_rf)
 ## Cross Validation
 
 Quels paramètres devons-nous optimiser pour le modèle randomforest.
-![](Rf opti.png)
+![](images/Rf opti.png)
 Optimisons le mtry.
 
 <br> </br>
@@ -882,7 +888,16 @@ pour obtenir des résultats corrects. Cet aspect a été oublier lors de notre p
 
 ## Création modèle SVM
 <br> </br>
-Création d'un jeu de donnée normalisé, en effet les données sont à variance forte.
+Création d'un jeu de donnée normalisé.
+
+En effet, ce modèle ainsi que le précèdent obtiennent de bien meilleur résultat avec une transformation des données spécifiques.
+
+Certains modèles requiert une normalization des données (variables explicatives entre 0 et 1 )
+
+tandis que d'autres requiert une standardization ( variables explicatives suivent une loi normale centrée réduite )
+
+
+
 ```{r}
 training_Scale <- training
 testing_Scale <- testing
@@ -893,6 +908,12 @@ testing_Scale[-1] <- scale(testing_Scale[-1])
 Création du modèle SVM grâce à la librairie e1071
 
 Une fonction kernel transforme les données en trouvant un hyperplan qui sépare les différentes catégories (problème de classification), grâce à cette fonction, nos données sont toujours linéairement séparables.
+
+<br> </br>
+
+![](images/SVM_model.png)
+
+<br> </br>
 On test plusieurs fonctions kernel afin de trouver la meilleure.
 ```{r}
 #install.packages('e1071')
@@ -933,7 +954,7 @@ Nous choississons d'optimiser cost et epsilon
 
 ```
 Résultat du bloc au dessus :
-![](SVM_Tune.png)
+![](images/SVM_Tune.png)
 
 <br> </br>
 Recherchons dans une plus grande étendue : 
@@ -957,7 +978,7 @@ Recherchons dans une plus grande étendue :
 #plot(Tune_SVM)
 
 ```
-![](SVMTune2.png)
+![](images/SVMTune2.png)
 <br> </br>
 
 On sélectionne le meilleur modèle.
@@ -991,7 +1012,7 @@ SVM_Opti = svm(formula = category~.,
 On compare les différentes fonction en cross-validation, on remarque que svmRadial obtient de meilleure résultat.
 <br> </br>
 Quels paramètres devons nous optimiser pour le modèle SvmRadial
-![](SVM Opti.png)
+![](images/SVM Opti.png)
 
 <br> </br>
 Optimisons les paramètres sigma et C.
@@ -1507,6 +1528,8 @@ AUC jeu de test : 0.87
 
 L'AUC augmente de 0.01 pour un passage de 440 variables à 25.
 
+NB: Par rapport à un modèle rf similaire (sans CV ni tune du mtry)
+
 
 <br> </br>
 Test Prediction
@@ -1530,4 +1553,40 @@ plot(predict_25 ~ category, data=testing, xlab="Observe",
 # Conclusion
 <br> </br>
 Nos 3 modèles sont utilisables.
-La forte réduction du nombre de variable sur le modèle randomForest a eu un impact mineur sur l'AUC.
+
+La forte réduction du nombre de variable sur le modèle randomForest a eu un impact mineur sur l'AUC.( à modèle comparable)
+
+Bilan des prédictions en **multi-classes** :
+
+<ul>
+* CART : 0,86 / 0,90 ; cv	0,93 / 0,89
+* RF   : 0,99 / 0,91 ; cv 0,99 / 0,92
+* SVM  : 0,96 / 0,84 ; cv 0,93 / 0,87
+
+</ul>
+25 variables (RF) : 0,93 / 0,87
+
+Nous avons choisis de réaliser d'effectuer des classification multi-classes au lieu d'une classification binaire(Economie ou non Economie).
+
+Après optimisation de chacun de nos modèles par cross-validation & hyperparamètres, la probabilité qu'un article d'une telle catégorie soit classé dans cette catégorie est proche de 90% pour chacun de nos modèles optimisés.
+
+Afin d'amèliorer les résultats, nous aurions pu baisser le minfreq afin d'avoir plus de variables explicatives. Cela aurait augmenter les temps de calculs, et particulièrement lors de l'amélioration des modèles.
+
+Le choix de la metric "Accuracy" pour l'optimisation de nos modèles a été arbitraire et sera questionné lors de nos prochains projets.
+
+Nous avons réaliser des modèles "simples" pour tester les modèles, puis des modèles optimisé où nous réalisions une cross-validation et une optimisation des hyperparamètres. Nous pouvons observer une amélioration entre les modèles simples et leurs modèles optimisé.
+
+Le projet est réussi et nous vous remercions pour les réponses rapides à nos mails.
+
+
+
+
+
+
+
+
+
+
+
+
+
