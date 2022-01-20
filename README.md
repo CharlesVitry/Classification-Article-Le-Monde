@@ -1,12 +1,14 @@
 # Classification-Article-Le-Monde
 
-[Rapport](https://okacola.github.io/Classification-Article-Le-Monde/Classification.html)
+[Rapport](https://CharlesVitry.github.io/Classification-Article-Le-Monde/Classification.html)
 
-**Algorithmes utilisés : Cart, Random Forest, SVM avec Validation croisée**
+* **Ensemble variables explicatives Xi** : nbre d’occurences des mots dans l’article.
+* **Variable à expliquer** : la catégorie de l’article. (Multi-classes prédiction)
+* **Fonction de perte/évaluation** : Matrice de confusion/AUC
+* **Modèles** : __CART__(cp), __RandomForest__(mtry), __SVM__(sigma/cost)
+* **Méthode pour éviter le sur-apprentissage** : Validation croisée.
 
-Fonction de perte/évaluation : Matrice de confusion/AUC
 
 
-### TO DO
-* Conclusion rédaction
-* Mise en forme Html
+
+
