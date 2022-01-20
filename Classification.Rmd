@@ -1572,7 +1572,7 @@ Après optimisation de chacun de nos modèles par cross-validation & hyperparam�
 
 Afin d'amèliorer les résultats, nous aurions pu baisser le minfreq afin d'avoir plus de variables explicatives. Cela aurait augmenter les temps de calculs, et particulièrement lors de l'amélioration des modèles.
 
-Le choix de la metric "Accuracy" pour l'optimisation de nos modèles a été arbitraire et sera questionné lors de nos prochains projets.
+Le choix de la metric "Accuracy" pour l'optimisation de nos modèles a été arbitraire, après visualisation des matrices de confusion, on remarque que les proportions des catégories a eu beaucoup d'influence. Ainsi les articles de catégorie "planete" sont très mal prédis. Une metric qui pénalise plus les erreurs sur cette catégorie aurait éviter ce problème.
 
 Nous avons réaliser des modèles "simples" pour tester les modèles, puis des modèles optimisé où nous réalisions une cross-validation et une optimisation des hyperparamètres. Nous pouvons observer une amélioration entre les modèles simples et leurs modèles optimisé.
 
