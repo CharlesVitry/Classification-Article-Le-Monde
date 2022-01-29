@@ -1,6 +1,6 @@
-# Classification-Article-Le-Monde
+# :page_facing_up: Classification-Article-Le-Monde  :page_with_curl:
 
-## [Rapport](https://CharlesVitry.github.io/Classification-Article-Le-Monde/)
+## :fast_forward: [Rapport](https://CharlesVitry.github.io/Classification-Article-Le-Monde/) :rewind:
 
 * **Ensemble variables explicatives Xi** : nbre d’occurences des mots dans l’article.
 * **Variable à expliquer** : la catégorie de l’article. (Multi-classes prédiction)
